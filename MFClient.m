@@ -47,25 +47,33 @@
 static MFClient *sharedClient = nil;
 
 #pragma mark Singleton methods
-+ (MFClient *)sharedClient {
-	if (sharedClient == nil) {
-		[[self alloc] init];
++ (MFClient *)sharedClient
+{
+	if (sharedClient == nil)
+    {
+		sharedClient = [[self alloc] init];
 	}
 	
 	return sharedClient;
 }
 
-+ (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key {
-	if ([key isEqualToString:@"filesystems"] || [key isEqualToString:@"mountedFilesystems"]) {
++ (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key
+{
+	if ([key isEqualToString:@"filesystems"] || [key isEqualToString:@"mountedFilesystems"])
+    {
 		return [NSSet setWithObjects:@"persistentFilesystems", @"temporaryFilesystems", nil];
-	} else {
+	}
+    else
+    {
 		return [super keyPathsForValuesAffectingValueForKey: key];
 	}
 }
 
 
-+ (MFClient *)allocWithZone:(NSZone *)zone {
-	if (sharedClient == nil) {
++ (MFClient *)allocWithZone:(NSZone *)zone
+{
+	if (sharedClient == nil)
+    {
 		sharedClient = [super allocWithZone: zone];
 		return sharedClient;
 	}
@@ -73,7 +81,8 @@ static MFClient *sharedClient = nil;
 	return nil;
 }
 
-- (void)registerForGeneralNotifications {
+- (void)registerForGeneralNotifications
+{
 	NSDistributedNotificationCenter *dnc = [NSDistributedNotificationCenter defaultCenter];
 	[dnc addObserver:self selector:@selector(handleRecentsUpdatedNotification:) name:kMFRecentsUpdatedNotification object:kMFDNCObject];
 	
@@ -81,9 +90,12 @@ static MFClient *sharedClient = nil;
 	[nc addObserver:self selector:@selector(handleApplicationTerminatingNotification:) name:NSApplicationWillTerminateNotification object:nil];
 }
 
-- (id)init {
+- (id)init
+{
 	self = [super init];
-	if (self != nil) {
+
+	if (self != nil)
+    {
 		[[MFLogging sharedLogging] setDelegate:self];
 		[self registerForGeneralNotifications];
 		[self initializeIvars];
@@ -94,14 +106,16 @@ static MFClient *sharedClient = nil;
 }
 
 
-- (void)initializeIvars {
+- (void)initializeIvars
+{
 	plugins = [NSMutableArray array];
 	recents = [NSMutableArray array];
 	persistentFilesystems = [NSMutableArray array];
 	temporaryFilesystems = [NSMutableArray array];
 }
 
-- (void)fillInitialStatus {
+- (void)fillInitialStatus
+{
 	// Reset everything
 	[self initializeIvars];
 	
@@ -110,50 +124,62 @@ static MFClient *sharedClient = nil;
 	NSArray *remoteFilesystems = [server filesystems];
 	
 	pluginsDictionary = [NSMutableDictionary dictionaryWithCapacity:10];
-	for(id remotePlugin in remotePlugins) {
-		Class PluginClientClass = NSClassFromString([remotePlugin subclassNameForClassName: NSStringFromClass( [MFClientPlugin class ] )]);
-		if (!PluginClientClass) {
+	for (id remotePlugin in remotePlugins)
+    {
+		Class PluginClientClass = NSClassFromString([remotePlugin subclassNameForClassName: NSStringFromClass( [MFClientPlugin class])]);
+
+		if (!PluginClientClass)
+        {
 			MFLogS(self, @"Problem getting client plugin class for plugin %@", remotePlugin);
 			PluginClientClass = [MFClientPlugin class];
 		}
 			
 		MFClientPlugin *plugin = [[PluginClientClass alloc] initWithRemotePlugin:remotePlugin];
-		if (plugin) {
+		if (plugin)
+        {
 			[self storePlugin: plugin];
-		} else {
+		}
+        else
+        {
 			MFLogS(self, @"Could not init client plugin from server plugin %@", remotePlugin);
 		}
 	}
 	
 	// Fill filesystems
 	filesystemsDictionary = [NSMutableDictionary dictionaryWithCapacity:10];
-	for(id remoteFS in remoteFilesystems) {
+	for(id remoteFS in remoteFilesystems)
+    {
 		Class FSClientClass = NSClassFromString([[remoteFS plugin] subclassNameForClassName:NSStringFromClass([MFClientFS class])]);
-		if (!FSClientClass) {
+		if (!FSClientClass)
+        {
 			MFLogS(self, @"Problem getting client fs class for fs %@", remoteFS);
 			FSClientClass = [MFClientFS class];
 		}
 		
 		MFClientPlugin *plugin = [pluginsDictionary objectForKey: [remoteFS pluginID]];
 		MFClientFS *fs = [FSClientClass clientFSWithRemoteFS: remoteFS clientPlugin: plugin];
-		if (fs) {
+		if (fs)
+        {
 			[self storeFilesystem: fs];
 		}
-		else {
+		else
+        {
 			MFLogSO(self, remoteFS, @"Could not init client fs from server fs %@", remoteFS);
 		}
 	}
 	
 	// Fill Recents
 	NSMutableArray *recentsFromServer = [[server recents] mutableCopy];
-	for (NSDictionary *recent in recentsFromServer) {
+	for (NSDictionary *recent in recentsFromServer)
+    {
 		[[self mutableArrayValueForKey:@"recents"] addObject:[[MFClientRecent alloc] initWithParameterDictionary: recent]];	
 	}
 	
 	[self loadOrdering];
 }
 
-- (BOOL)establishCommunication {
+- (BOOL)establishCommunication
+{
 	// Set up DO
 	connection = [NSConnection connectionWithRegisteredName:kMFDistributedObjectName host:nil];
     [connection setRequestTimeout:5.0f];
@@ -163,17 +189,24 @@ static MFClient *sharedClient = nil;
 	[serverObject setProtocolForProxy:@protocol(MFServerProtocol)];
 	server = (id <MFServerProtocol>)serverObject;
 	[serverObject registerClient: self];
+
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleConnectionDied:) name:NSConnectionDidDieNotification object:connection];
-	if (serverObject) {
+
+	if (serverObject)
+    {
 		[MFLogReader sharedReader]; // Tell the log reader to update
 		return YES;
-	} else {
+	}
+    else
+    {
 		return NO;
 	}
 }
 
-- (BOOL)setup {
-	if ([self establishCommunication]) {
+- (BOOL)setup
+{
+	if ([self establishCommunication])
+    {
 		[self fillInitialStatus];
 		return YES;
 	}
@@ -184,22 +217,29 @@ static MFClient *sharedClient = nil;
 
 
 #pragma mark Server Callback Handling
-- (void)noteStatusChangedForFSWithUUID:(NSString *)uuid {
+- (void)noteStatusChangedForFSWithUUID:(NSString *)uuid
+{
 	MFClientFS *fs = [self filesystemWithUUID:uuid];
 	[fs noteStatusInfoChanged];
+    
 	MFLogSO(self, fs, @"Note status changed for fs %@ to %@", fs, fs.status);
 }
 
-- (void)noteParametersChangedForFSWithUUID:(NSString *)uuid {
+- (void)noteParametersChangedForFSWithUUID:(NSString *)uuid
+{
 	MFClientFS *fs = [self filesystemWithUUID:uuid];
 	MFLogSO(self, fs, @"Note parameters changed for fs %@", fs);
+    
 	[fs noteParametersChanged];
 }
 
-- (void)noteFilesystemAddedWithUUID:(NSString *)uuid {
+- (void)noteFilesystemAddedWithUUID:(NSString *)uuid
+{
 	MFLogS(self, @"Note fs added with uuid %@", uuid);
 	id remoteFilesystem = [server filesystemWithUUID:uuid];
-	if (![self filesystemWithUUID:uuid]) {
+
+	if (![self filesystemWithUUID:uuid])
+    {
 		MFClientPlugin *plugin = [pluginsDictionary objectForKey: [remoteFilesystem pluginID]];
 		MFClientFS *fs = [MFClientFS clientFSWithRemoteFS:remoteFilesystem clientPlugin:plugin];
 		
@@ -207,54 +247,69 @@ static MFClient *sharedClient = nil;
 	}
 }
 
-- (void)noteFilesystemRemovedWithUUID:(NSString *)uuid {
+- (void)noteFilesystemRemovedWithUUID:(NSString *)uuid
+{
 	MFLogS(self, @"Note fs removed with uuid %@", uuid);
 	MFClientFS *fs = [self filesystemWithUUID:uuid];
 	[self removeFilesystem: fs];
 }
 
-- (void)noteRecentAdded:(NSDictionary *)recentParameters {
+- (void)noteRecentAdded:(NSDictionary *)recentParameters
+{
 	[[self mutableArrayValueForKey:@"recents"] addObject:[[MFClientRecent alloc] initWithParameterDictionary: recentParameters ]];
 	
-	if ([[self recents] count] > 10) {
+	if ([[self recents] count] > 10)
+    {
 		[[self mutableArrayValueForKey:@"recents"] removeObjectAtIndex: 0];
 	}
 }
 
 #pragma mark Action methods
-- (MFClientFS *)newFilesystemWithPlugin:(MFClientPlugin *)plugin {
+- (MFClientFS *)newFilesystemWithPlugin:(MFClientPlugin *)plugin
+{
 	NSAssert(plugin, @"MFClient asked to make new filesystem with nil plugin");
 	id newRemoteFS = [server newFilesystemWithPluginName: plugin.ID];
 	return [self filesystemWithUUID:[newRemoteFS uuid]];
 }
 
-- (MFClientFS *)quickMountFilesystemWithURL:(NSURL *)url error:(NSError **)error {
+- (MFClientFS *)quickMountFilesystemWithURL:(NSURL *)url error:(NSError **)error
+{
 	id remoteFS = [server quickMountWithURL:url];
-	if (!remoteFS) {
+
+	if (!remoteFS)
+    {
 		NSError *serverError = [server recentError];
 		if (serverError && error)
 			*error = serverError;
 		return nil;
-	} else {
-		if ([self filesystemWithUUID:[remoteFS uuid]]) {
+	}
+    else
+    {
+		if ([self filesystemWithUUID:[remoteFS uuid]])
+        {
 			return [self filesystemWithUUID:[remoteFS uuid]];
 		}
 		
 		MFClientPlugin *plugin = [self pluginWithID: [remoteFS pluginID]];
-		MFClientFS *newFS = [[MFClientFS alloc] initWithRemoteFS: remoteFS clientPlugin: plugin ];
+		MFClientFS *newFS = [[MFClientFS alloc] initWithRemoteFS: remoteFS clientPlugin: plugin];
+
 		[self storeFilesystem: newFS];
 		return newFS;
 	}
 }
 
-- (void)deleteFilesystem:(MFClientFS *)fs {
+- (void)deleteFilesystem:(MFClientFS *)fs
+{
 	NSString *uuid = [fs uuid];
 	[server deleteFilesystemWithUUID:uuid];
 }
 
-- (void)handleConnectionDied:(NSNotification *)note {
+- (void)handleConnectionDied:(NSNotification *)note
+{
 	MFLogS(self, @"Connection died %@", note);
-	if ([delegate respondsToSelector: @selector(handleConnectionDied)]) {
+
+	if ([delegate respondsToSelector: @selector(handleConnectionDied)])
+    {
 		[delegate handleConnectionDied];
 	}
 }
@@ -262,11 +317,14 @@ static MFClient *sharedClient = nil;
 #pragma mark Recents
 
 
-- (MFClientFS *)mountRecent:(MFClientRecent *)recent error:(NSError **)error {
+- (MFClientFS *)mountRecent:(MFClientRecent *)recent error:(NSError **)error
+{
 	NSURL* url = [NSURL URLWithString: recent.descriptionString];
-	if (url) {
+	if (url)
+    {
 		MFClientFS* fs = [self quickMountFilesystemWithURL:url error:error];
-		if (fs) {
+		if (fs)
+        {
 			return fs;
 		}
 	}
@@ -275,96 +333,122 @@ static MFClient *sharedClient = nil;
 }
 
 #pragma mark Security
-OSStatus myKeychainCallback ( SecKeychainEvent keychainEvent,
+OSStatus myKeychainCallback (SecKeychainEvent keychainEvent,
 							 SecKeychainCallbackInfo *info,
-							 void *context ) {
-	MFClient *self = (MFClient *)context;
+							 MFClient *context)
+{
+	MFClient *self = context;
 	// MFLogS(self, @"Keychain callback received event is %d", keychainEvent);
 	SecKeychainItemRef itemRef = info -> item;
 	NSString *uuid = mfsecUUIDForKeychainItemRef(itemRef);
 	MFClientFS *fs = [self filesystemWithUUID:uuid];
-	if (fs) {
+	if (fs)
+    {
 		// MFLogS(self, @"Updating secrets for fs %@ due to keychain change", fs);
 		[fs updateSecrets];
 	}
+
 	return 0;
 }
 
-- (void)setupKeychainMonitoring {
+- (void)setupKeychainMonitoring
+{
 	SecKeychainEventMask eventMask = kSecUpdateEventMask | kSecAddEventMask;
-	SecKeychainAddCallback(myKeychainCallback , eventMask, self);
+	SecKeychainAddCallback(myKeychainCallback , eventMask, (__bridge void *)(self));
 }
 
 #pragma mark Logging
-- (void)sendASLMessageDict:(NSDictionary*)messageDict {
+- (void)sendASLMessageDict:(NSDictionary*)messageDict
+{
 	[server sendASLMessageDict: messageDict];
 }
 
-- (void)recordASLMessageDict:(NSDictionary*)messageDict {
+- (void)recordASLMessageDict:(NSDictionary*)messageDict
+{
 	[[MFLogReader sharedReader] recordASLMessageDict: messageDict];
 }
 
 #pragma mark Accessors and Setters
 
-- (NSArray *)filesystems {
+- (NSArray *)filesystems
+{
 	NSMutableArray *filesystems = [NSMutableArray array];
 	[filesystems addObjectsFromArray: temporaryFilesystems];
 	[filesystems addObjectsFromArray: persistentFilesystems];
 	return [filesystems copy];
 }
 
-- (NSArray *)mountedFilesystems {
+- (NSArray *)mountedFilesystems
+{
 	return [self.filesystems filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self.isMounted == YES"]];
 }
 
-- (void)storePlugin:(MFClientPlugin *)plugin {
+- (void)storePlugin:(MFClientPlugin *)plugin
+{
 	NSAssert(plugin && plugin.ID, @"plugin or ID null when storing plugin in MfClient");
-	[pluginsDictionary setObject: plugin forKey: plugin.ID ];
-	if ([plugins indexOfObject: plugin] == NSNotFound) {
+	[pluginsDictionary setObject: plugin forKey: plugin.ID];
+
+	if ([plugins indexOfObject: plugin] == NSNotFound)
+    {
 		[[self mutableArrayValueForKey:@"plugins"] addObject: plugin];
 	}
 }
 
-- (void)storeFilesystem:(MFClientFS *)fs {
+- (void)storeFilesystem:(MFClientFS *)fs
+{
 	NSAssert(fs && fs.uuid, @"FS or fs.uuid is nil when storing fs in MFClient");
 	[filesystemsDictionary setObject: fs forKey: fs.uuid];
-	if ([fs isPersistent] && [persistentFilesystems indexOfObject: fs] == NSNotFound) {
+
+	if ([fs isPersistent] && [persistentFilesystems indexOfObject: fs] == NSNotFound)
+    {
 		[[self mutableArrayValueForKey:@"persistentFilesystems"] addObject:fs];
-	} else if ( (![fs isPersistent]) && [temporaryFilesystems indexOfObject: fs] == NSNotFound) {
+	}
+    else if ( (![fs isPersistent]) && [temporaryFilesystems indexOfObject: fs] == NSNotFound)
+    {
 		[[self mutableArrayValueForKey:@"temporaryFilesystems"] addObject: fs];
 	}
 }
 
-- (void)removeFilesystem:(MFClientFS *)fs {
+- (void)removeFilesystem:(MFClientFS *)fs
+{
 	NSAssert(fs, @"Asked to remove nil fs in MFClient");
 	[filesystemsDictionary removeObjectForKey: fs.uuid];
-	if ([fs isPersistent] && [persistentFilesystems indexOfObject: fs] != NSNotFound) {
+
+	if ([fs isPersistent] && [persistentFilesystems indexOfObject: fs] != NSNotFound)
+    {
 		[[self mutableArrayValueForKey:@"persistentFilesystems"]
 		 removeObject: fs];
-	} else if (![fs isPersistent] && [temporaryFilesystems indexOfObject: fs] != NSNotFound) {
+	}
+    else if (![fs isPersistent] && [temporaryFilesystems indexOfObject: fs] != NSNotFound)
+    {
 		[[self mutableArrayValueForKey:@"temporaryFilesystems"] removeObject: fs];
 	}
 }
 
-
-- (MFClientFS *)filesystemWithUUID:(NSString *)uuid {
+- (MFClientFS *)filesystemWithUUID:(NSString *)uuid
+{
 	NSAssert(uuid, @"uuid nil when requesting FS in MFClient");
 	return [filesystemsDictionary objectForKey:uuid];
 }
 
-- (MFClientPlugin *)pluginWithID:(NSString *)anID {
+- (MFClientPlugin *)pluginWithID:(NSString *)anID
+{
 	NSAssert(anID, @"id nil when requesting plugin in MFClient");
 	return [pluginsDictionary objectForKey:anID];
 }
 
 # pragma mark UI stuff
-- (void)moveUUIDS:(NSArray*)uuids toRow:(NSUInteger)row {
+- (void)moveUUIDS:(NSArray*)uuids toRow:(NSUInteger)row
+{
 	NSMutableArray *filesystemsToInsert = [NSMutableArray array];
 	NSMutableIndexSet *indexesToDelete = [NSMutableIndexSet indexSet];
 	
-	for(NSString *uuid in uuids) {
+	for(NSString *uuid in uuids)
+    {
 		MFClientFS *fs = [self filesystemWithUUID:uuid];
-		if (fs && [fs isPersistent]) {
+
+		if (fs && [fs isPersistent])
+        {
 			[filesystemsToInsert addObject: fs];
 			[indexesToDelete addIndex: [persistentFilesystems indexOfObject:fs]];
 		}
@@ -374,14 +458,19 @@ OSStatus myKeychainCallback ( SecKeychainEvent keychainEvent,
 	BOOL lastRow = (row == [persistentFilesystems count]);
 	NSMutableArray *updatedFilesystems = [self.persistentFilesystems mutableCopy];
 	
-	if (lastRow) {
+	if (lastRow)
+    {
 		[updatedFilesystems addObjectsFromArray: filesystemsToInsert];
 		[updatedFilesystems removeObjectsAtIndexes:indexesToDelete];
-	} else if ([indexesToAdd firstIndex] < [indexesToDelete firstIndex]) {
+	}
+    else if ([indexesToAdd firstIndex] < [indexesToDelete firstIndex])
+    {
 		[updatedFilesystems removeObjectsAtIndexes:indexesToDelete];
 		[updatedFilesystems insertObjects:filesystemsToInsert 
 								atIndexes:indexesToAdd];
-	} else {
+	}
+    else
+    {
 		[updatedFilesystems insertObjects:filesystemsToInsert atIndexes:indexesToAdd];
 		[updatedFilesystems removeObjectsAtIndexes:indexesToDelete];
 	}
@@ -391,27 +480,34 @@ OSStatus myKeychainCallback ( SecKeychainEvent keychainEvent,
 	[self didChangeValueForKey: @"persistentFilesystems"];
 
 	// Set the ordering correctly now
-	for(MFClientFS *fs in persistentFilesystems) {
+	for(MFClientFS *fs in persistentFilesystems)
+    {
 		[fs setDisplayOrder: [persistentFilesystems indexOfObject: fs]];
 	}
 	
 	[self writeOrdering];
 }
 
-- (void)writeOrdering {
+- (void)writeOrdering
+{
 	NSArray *uuidOrdering = [self.persistentFilesystems valueForKey: @"uuid"];
 	NSString *fullPath = [ORDERING_FILE_PATH stringByExpandingTildeInPath];
 	NSString *dirPath = [fullPath stringByDeletingLastPathComponent];
+
 	[[NSFileManager defaultManager] createDirectoryAtPath: dirPath withIntermediateDirectories:YES attributes:nil error:NULL];
 	[uuidOrdering writeToFile: fullPath atomically:YES];
 }
 
-- (void)loadOrdering {
+- (void)loadOrdering
+{
 	NSString *fullPath = [ORDERING_FILE_PATH stringByExpandingTildeInPath];
 	NSArray *uuidOrdering = [NSArray arrayWithContentsOfFile:fullPath];
-	if (uuidOrdering) {
-		for(NSString *uuid in uuidOrdering)
-			if ([self filesystemWithUUID:uuid]) {
+
+	if (uuidOrdering)
+    {
+		for (NSString *uuid in uuidOrdering)
+			if ([self filesystemWithUUID:uuid])
+            {
 				[[self filesystemWithUUID:uuid] setDisplayOrder:[uuidOrdering indexOfObject:uuid]];	
 			}
 	}
@@ -425,8 +521,10 @@ OSStatus myKeychainCallback ( SecKeychainEvent keychainEvent,
 	[server unregisterClient: self];
 }
 
-- (NSString *)createMountIconForFilesystem:(MFClientFS *)fs atPath:(NSURL *)dirPathURL {
-	if (![fs isPersistent]) {
+- (NSString *)createMountIconForFilesystem:(MFClientFS *)fs atPath:(NSURL *)dirPathURL
+{
+	if (![fs isPersistent])
+    {
 		// We shouldn't be creating a mount icon for a non-persistent fs
 		return nil;	
 	}

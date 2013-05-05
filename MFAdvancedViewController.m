@@ -10,19 +10,26 @@
 #import "MFClientFS.h"
 
 @implementation MFAdvancedViewController
-- (void)awakeFromNib {
+- (void)awakeFromNib
+{
 	[iconView bind:@"fs" toObject:self withKeyPath:@"representedObject" options:nil];
 }
 
-- (IBAction)chooseIcon:(id)sender {
+- (IBAction)chooseIcon:(id)sender
+{
 	NSOpenPanel *panel = [NSOpenPanel openPanel];
 	[panel setAllowsMultipleSelection:NO];
 	[panel setAllowedFileTypes:[NSArray arrayWithObject: @"icns"]];
+
 	NSInteger returnValue = [panel runModalForTypes:[NSArray arrayWithObject: @"icns"]];
-	if (returnValue == NSOKButton && [[panel filenames] count] > 0) {
+
+	if (returnValue == NSOKButton && [[panel filenames] count] > 0)
+    {
 		NSString *filename = [[panel filenames] objectAtIndex:0];
 		NSImage *iconImage = [[NSImage alloc] initWithContentsOfFile:filename];
-		if (iconImage) {
+
+		if (iconImage)
+        {
 			[(MFClientFS*)[self representedObject] setIconImage:iconImage];
 		}
 	}

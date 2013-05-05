@@ -7,9 +7,10 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#import "MFIconSettingImageView.h"
 
-@class MFIconSettingImageView;
-@interface MFAdvancedViewController : NSViewController {
+@interface MFAdvancedViewController : NSViewController
+{
 	IBOutlet MFIconSettingImageView *iconView;
 }
 

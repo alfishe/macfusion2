@@ -24,8 +24,10 @@
 #define kMFPrefsGeneralToolbarIdentifier @"General"
 
 @implementation MFPreferencesController
-- (id)initWithWindowNibName:(NSString *)name {
-	if (self = [super initWithWindowNibName: name]) {
+- (id)initWithWindowNibName:(NSString *)name
+{
+	if (self = [super initWithWindowNibName: name])
+    {
 		_client = [MFClient sharedClient];
 		_sharedPreferences = [MFPreferences sharedPreferences];
 	}
@@ -33,11 +35,13 @@
 	return self;
 }
 
-- (NSArray *)prefsViews {
+- (NSArray *)prefsViews
+{
 	return [NSArray arrayWithObjects: pluginPrefsView, generalPrefsView, nil];
 }
 
-- (void)awakeFromNib {
+- (void)awakeFromNib
+{
 	[agentLoginItemButton setState:mfcGetStateForAgentLoginItem()];
 	[menuLoginItemButton setState:[_sharedPreferences getBoolForPreference: kMFPrefsAutoloadMenuling]];
 	NSString *macfuseVersion = mfcGetMacFuseVersion();
@@ -50,7 +54,9 @@
 	[[self window] setToolbar:toolbar];
 	_prefsViewSizes = [NSMapTable new];
 	_emptyView = [NSView new];
-	for(NSView *view in [self prefsViews])	{
+
+	for (NSView *view in [self prefsViews])
+    {
 		NSValue *sizeValue = [NSValue valueWithSize:[view frame].size];
 		[_prefsViewSizes setObject:sizeValue forKey:view];
 	}
@@ -58,26 +64,36 @@
 	[self toolbarItemChanged:[[toolbar items] objectAtIndex:0]];
 }
 
-- (IBAction)loginItemCheckboxChanged:(id)sender {
-	if (sender == agentLoginItemButton) {
+- (IBAction)loginItemCheckboxChanged:(id)sender
+{
+	if (sender == agentLoginItemButton)
+    {
 		mfcSetStateForAgentLoginItem([sender state]);
-	} else if (sender == menuLoginItemButton) {
+	}
+    else if (sender == menuLoginItemButton)
+    {
 		[[MFPreferences sharedPreferences] setBool:[sender state] forPreference:kMFPrefsAutoloadMenuling];
-	} else {
+	}
+    else
+    {
 		MFLogS(self, @"Invalid sender for loginItemCheckboxChanged");
 	}
 }
 
 # pragma mark Toolbar
-- (NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSString *)itemIdentifier willBeInsertedIntoToolbar:(BOOL)flag {
+- (NSToolbarItem *)toolbar:(NSToolbar *)toolbar itemForItemIdentifier:(NSString *)itemIdentifier willBeInsertedIntoToolbar:(BOOL)flag
+{
 	NSToolbarItem *item = nil;
 
-	if (itemIdentifier == kMFPrefsPluginToolbarIdentifier) {
+	if ([itemIdentifier isEqual: kMFPrefsPluginToolbarIdentifier])
+    {
 		item = [[NSToolbarItem alloc] initWithItemIdentifier: kMFPrefsPluginToolbarIdentifier];
 
 		[item setLabel:@"Plugins"];
 		[item setImage:[NSImage imageNamed: @"NSAdvanced"]];
-	} else if (itemIdentifier == kMFPrefsGeneralToolbarIdentifier) {
+	}
+    else if ([itemIdentifier isEqual: kMFPrefsGeneralToolbarIdentifier])
+    {
 		item = [[NSToolbarItem alloc] initWithItemIdentifier: kMFPrefsGeneralToolbarIdentifier];
 		[item setLabel:@"General"];
 		[item setImage:[NSImage imageNamed: @"NSPreferencesGeneral"]];
@@ -88,25 +104,35 @@
 	return item;
 }
 
-- (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar {
+- (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
+{
 	return [NSArray arrayWithObjects:kMFPrefsGeneralToolbarIdentifier, kMFPrefsPluginToolbarIdentifier, nil];
 }
 
-- (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
+- (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
+{
 	return [self toolbarAllowedItemIdentifiers:toolbar];
 }
 
-- (NSArray *)toolbarSelectableItemIdentifiers:(NSToolbar *)toolbar {
+- (NSArray *)toolbarSelectableItemIdentifiers:(NSToolbar *)toolbar
+{
 	return [self toolbarAllowedItemIdentifiers:toolbar];
 }
 
-- (IBAction)toolbarItemChanged:(id)sender {
+- (IBAction)toolbarItemChanged:(id)sender
+{
 	NSView *newView;
-	if ([sender itemIdentifier] == kMFPrefsPluginToolbarIdentifier) {
+
+	if ([[sender itemIdentifier] isEqual: kMFPrefsPluginToolbarIdentifier])
+    {
 		newView = pluginPrefsView;
-	} else if ([sender itemIdentifier] == kMFPrefsGeneralToolbarIdentifier) {
+	}
+    else if ([[sender itemIdentifier] isEqual: kMFPrefsGeneralToolbarIdentifier])
+    {
 		newView = generalPrefsView;
-	} else {
+	}
+    else
+    {
 		return;
 	}
 	

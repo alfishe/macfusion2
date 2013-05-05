@@ -29,6 +29,7 @@
 #import "MFEditingController.h"
 #import "MFPreferences.h"
 #import "MFLogging.h"
+#import "MGActionButton.h"
 
 @interface MFSettingsController(PrivateAPI)
 - (void)editFilesystem:(MFClientFS*)fs;
@@ -137,7 +138,8 @@
 
 
 # pragma mark Handling Notifications
-- (void)awakeFromNib {
+- (void)awakeFromNib
+{
 	NSCell *testCell = [[MFFilesystemCell alloc] init];
 	[[filesystemTableView tableColumnWithIdentifier:@"test"] setDataCell: testCell];
 	NSMenu *tableViewMenu = [[NSMenu alloc] initWithTitle:@"Tableview Menu"];
@@ -145,7 +147,7 @@
 	[tableViewMenu addItemWithTitle:@"Unmount" action:@selector(unmount) keyEquivalent:@""];
 	[tableViewMenu addItemWithTitle:@"Edit" action:@selector(editSelectedFilesystem:) keyEquivalent:@""];
 	
-	[[MFPreferences sharedPreferences] addObserver:self forKeyPath:kMFPrefsAutosize options:0 context:self];
+	[[MFPreferences sharedPreferences] addObserver:self forKeyPath:kMFPrefsAutosize options:0 context:(__bridge void *)(self)];
 	[filesystemTableView setIntercellSpacing: NSMakeSize(10, 0)];
 	
 	NSWindow *window = [filesystemTableView window];
@@ -155,8 +157,10 @@
 	[filesystemTableView setController:self];
 }
 
-- (void)resizeWindowForContent {
-	if ([[MFPreferences sharedPreferences] getBoolForPreference:kMFPrefsAutosize]) {
+- (void)resizeWindowForContent
+{
+	if ([[MFPreferences sharedPreferences] getBoolForPreference:kMFPrefsAutosize])
+    {
 		// Autosize the window vertically
 		NSWindow* window = [filesystemTableView window];
 		NSInteger maxRows = 10;
@@ -164,11 +168,16 @@
 		NSInteger rows, filesystemCount;
 		filesystemCount = [[filesystemArrayController arrangedObjects] count];
 		
-		if (filesystemCount < minRows)  {
+		if (filesystemCount < minRows)
+        {
 			rows = minRows;	
-		} else if (filesystemCount > maxRows) {
+		}
+        else if (filesystemCount > maxRows)
+        {
 			rows = maxRows;	
-		} else {
+		}
+        else
+        {
 			rows = filesystemCount;
 		}
 		
@@ -195,7 +204,8 @@
 	}
 }
 
-- (void)connectionOK {
+- (void)connectionOK
+{
 	[filesystemTableView reloadData];
 	[filesystemTableView noteHeightOfRowsWithIndexesChanged: 
 	 [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, [client.filesystems count])]];
@@ -204,7 +214,7 @@
 	[[client.filesystems filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self.status == %@", kMFStatusFSMounted]] 
 	 makeObjectsPerformSelector:@selector(setClientFSDelegate:) withObject:self];
 	
-	[filesystemArrayController addObserver:self forKeyPath:@"arrangedObjects" options:NSKeyValueObservingOptionNew context:self];
+	[filesystemArrayController addObserver:self forKeyPath:@"arrangedObjects" options:NSKeyValueObservingOptionNew context:(__bridge void *)(self)];
 	[self resizeWindowForContent];
 	[newFSActionButton setMenu:[self newFilesystemMenu]];
 }
@@ -266,8 +276,10 @@
 	}
 }
 
-- (void)editFilesystem:(MFClientFS *)fs {
-	if (!fs || [fs isMounted] || [fs isWaiting]) {
+- (void)editFilesystem:(MFClientFS *)fs
+{
+	if (!fs || [fs isMounted] || [fs isWaiting])
+    {
 		return;
 	}
 	
@@ -275,26 +287,34 @@
 	[MFEditingController editFilesystem: fs onWindow:parent];
 }
 
-- (void)toggleFilesystem:(MFClientFS *)fs {
-	if ([fs isMounted]) {
+- (void)toggleFilesystem:(MFClientFS *)fs
+{
+	if ([fs isMounted])
+    {
 		[fs unmount];
-	} else if ([fs isUnmounted] || [fs isFailedToMount]) {
+	}
+    else if ([fs isUnmounted] || [fs isFailedToMount])
+    {
 		[fs setClientFSDelegate: self];
 		[fs mount];
 	}
 }
 
 
-- (void)deleteFilesystems:(NSArray *)filesystems {
+- (void)deleteFilesystems:(NSArray *)filesystems
+{
 	NSMutableArray *filesystemsToDelete = [filesystems mutableCopy];
-	for(MFClientFS *fs in filesystems) {
-		if(!([fs isUnmounted] || [fs isFailedToMount])) {
+	for (MFClientFS *fs in filesystems)
+    {
+		if (!([fs isUnmounted] || [fs isFailedToMount]))
+        {
 			[filesystemsToDelete removeObject: fs];
 			MFLogS(self, @"Can't delete filesystem %@", fs);
 		}
 	}
 
-	if ([filesystemsToDelete count] > 0) {
+	if ([filesystemsToDelete count] > 0)
+    {
 		NSString *fsWord = [filesystemsToDelete count] == 1 ? @"filesystem" : @"filesystems";
 		NSString *messageText = [NSString stringWithFormat: @"Are you sure you want to delete the %@ %@?", fsWord,
 								 [[filesystemsToDelete valueForKey: kMFFSNameParameter] componentsJoinedByString: @", "]];
@@ -308,26 +328,31 @@
 		[deleteConfirmation beginSheetModalForWindow: [filesystemTableView window]
 									   modalDelegate:self
 									  didEndSelector:@selector(deleteConfirmationAlertDidEnd:returnCode:contextInfo:)
-										 contextInfo:filesystemsToDelete];
+										 contextInfo:(__bridge void *)(filesystemsToDelete)];
 	}
 }
 
-- (void)deleteFilesystem:(MFClientFS *)fs {
+- (void)deleteFilesystem:(MFClientFS *)fs
+{
 	[self deleteFilesystems: [NSArray arrayWithObject: fs]];
 }
 	
 
 # pragma mark Selected Action Methods
-- (IBAction)filterLogForSelectedFS:(id)sender {
+- (IBAction)filterLogForSelectedFS:(id)sender
+{
 	[self showLogViewer: self];
+
 	NSArray *selectedFilesystems = [self selectedFilesystems];
-	if ([selectedFilesystems count] == 1) {
+	if ([selectedFilesystems count] == 1)
+    {
 		[logViewerController filterForFilesystem: 
 		 [selectedFilesystems objectAtIndex: 0]];
 	}
 }
 
-- (IBAction)editSelectedFS:(id)sender {
+- (IBAction)editSelectedFS:(id)sender
+{
 	NSArray *selectedFilesystems = [self selectedFilesystems];
 	if ([selectedFilesystems count] == 1) {
 		[self editFilesystem: [selectedFilesystems objectAtIndex: 0]];
@@ -336,41 +361,56 @@
 	}
 }
 
-- (IBAction)toggleSelectedFS:(id)sender {
+- (IBAction)toggleSelectedFS:(id)sender
+{
 	NSArray *selectedFilesystems = [self selectedFilesystems];
-	for (MFClientFS *fs in selectedFilesystems) {
+	for (MFClientFS *fs in selectedFilesystems)
+    {
 		[self toggleFilesystem: fs];
 	}
 }
 
-- (IBAction)revealConfigForSelectedFS:(id)sender {
-	for(MFClientFS *fs in [self selectedFilesystems]) {
+- (IBAction)revealConfigForSelectedFS:(id)sender
+{
+	for(MFClientFS *fs in [self selectedFilesystems])
+    {
 		[[NSWorkspace sharedWorkspace] selectFile:fs.filePath inFileViewerRootedAtPath:nil];
 	}
 }
 
-- (IBAction)revealSelectedFS:(id)sender {
-	for(MFClientFS *fs in [self selectedFilesystems]) {
-		if ([fs isMounted]) {
-			[[NSWorkspace sharedWorkspace] selectFile:nil inFileViewerRootedAtPath:fs.mountPath ];	
+- (IBAction)revealSelectedFS:(id)sender
+{
+	for (MFClientFS *fs in [self selectedFilesystems])
+    {
+		if ([fs isMounted])
+        {
+			[[NSWorkspace sharedWorkspace] selectFile:nil inFileViewerRootedAtPath:fs.mountPath];	
 		}
 	}
 }
 
-- (IBAction)duplicateSelectedFS:(id)sender {
+- (IBAction)duplicateSelectedFS:(id)sender
+{
 }
 
-- (IBAction)deleteSelectedFS:(id)sender {
+- (IBAction)deleteSelectedFS:(id)sender
+{
 	[self deleteFilesystems:[self selectedFilesystems]];
 }
 
 
-- (void)deleteConfirmationAlertDidEnd:(NSAlert*)alert returnCode:(NSInteger)code contextInfo:(void *)context {
-	NSArray *filesystemsToDelete = (NSArray *)context;
-	if (code == NSAlertSecondButtonReturn) {
+- (void)deleteConfirmationAlertDidEnd:(NSAlert*)alert returnCode:(NSInteger)code contextInfo:(void *)context
+{
+	NSArray *filesystemsToDelete = (__bridge NSArray *)context;
+
+	if (code == NSAlertSecondButtonReturn)
+    {
 		
-	} else if (code == NSAlertFirstButtonReturn) {
-		for(MFClientFS *fs in filesystemsToDelete) {
+	}
+    else if (code == NSAlertFirstButtonReturn)
+    {
+		for (MFClientFS *fs in filesystemsToDelete)
+        {
 			[client deleteFilesystem: fs];	
 		}
 	}
@@ -378,10 +418,14 @@
 
 
 # pragma mark Notification
-- (void)filesystemDidChangeStatus:(MFClientFS *)fs {
+- (void)filesystemDidChangeStatus:(MFClientFS *)fs
+{
 	[filesystemTableView statusChangedForFS: fs];
-	if ([fs isFailedToMount]) {
-		if ([fs error]) {
+
+	if ([fs isFailedToMount])
+    {
+		if ([fs error])
+        {
 			[NSApp presentError:[fs error]
 				 modalForWindow:[filesystemTableView window]
 					   delegate:nil
@@ -393,43 +437,56 @@
 	}
 }
 
-- (void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    if (context == self) {
+- (void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
+{
+    if (context == (__bridge void *)(self))
+    {
 		[self resizeWindowForContent];
-	} else {
+	}
+    else
+    {
 		[super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 	}
 }
 
-- (NSError *)application:(NSApplication *)application willPresentError:(NSError *)error {
-	if ([error code] == kMFErrorCodeMountFaliure) {
+- (NSError *)application:(NSApplication *)application willPresentError:(NSError *)error
+{
+	if ([error code] == kMFErrorCodeMountFaliure)
+    {
 		NSString* newDescription = [NSString stringWithFormat: @"Could not mount filesystem: %@", [error localizedDescription]];
 		return [MFError errorWithErrorCode:kMFErrorCodeMountFaliure description:newDescription];
-	} else {
+	}
+    else
+    {
 		return error;
 	}
 }
 
-- (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename {
+- (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename
+{
 	NSString* fsLocation = [@"~/Library/Application Support/Macfusion/Filesystems" stringByExpandingTildeInPath];
-	if ([[filename stringByDeletingLastPathComponent] isEqualToString:fsLocation]) {
+
+	if ([[filename stringByDeletingLastPathComponent] isEqualToString:fsLocation])
+    {
 		NSString *uuid = [[filename lastPathComponent] stringByDeletingPathExtension];
 		[self editFilesystem:[client filesystemWithUUID:uuid]];
-	} else {
+	}
+    else
+    {
 		MFLogS(self, @"Not opening file. It is in the wrong place");
 	}
 		
 	return YES;
 }
 
-
-
-
 # pragma mark Menu UI Stuff
-- (NSMenu *)newFilesystemMenu {
+- (NSMenu *)newFilesystemMenu
+{
 	NSMenu *menu = [NSMenu new];
 	[menu setTitle: @"New filesystems"];
-	for(MFClientPlugin* plugin in [pluginArrayController arrangedObjects]) {
+    
+	for (MFClientPlugin* plugin in [pluginArrayController arrangedObjects])
+    {
 		NSMenuItem *item = [NSMenuItem new];
 		[item setTitle: [plugin shortName]];
 		[item setState: 0];
@@ -443,49 +500,68 @@
 	return menu;
 }
 
-- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem {
+- (BOOL)validateUserInterfaceItem:(id <NSValidatedUserInterfaceItem>)anItem
+{
 	SEL action = [anItem action];
 	NSArray *selectedFilesystems = [self selectedFilesystems];
 	
 	// If action has to do with filesystems, and none are selected, disable it
-	if ( [selectedFilesystems count] == 0 && [NSStringFromSelector([anItem action]) rangeOfString: @"FS"].location != NSNotFound) {
+	if ( [selectedFilesystems count] == 0 && [NSStringFromSelector([anItem action]) rangeOfString: @"FS"].location != NSNotFound)
+    {
 		return NO;
-	} else {
+	}
+    else
+    {
 		MFClientFS *fs;
 		// Validate all selected filesystems
-		for (fs in selectedFilesystems) {
-			if (action == @selector(toggleSelectedFS:)) {
-				if ([[NSSet setWithArray:[selectedFilesystems valueForKey:@"status"]] count] > 1) {
+		for (fs in selectedFilesystems)
+        {
+			if (action == @selector(toggleSelectedFS:))
+            {
+				if ([[NSSet setWithArray:[selectedFilesystems valueForKey:@"status"]] count] > 1)
+                {
 					return NO;
 				}
 				
-				if ([fs isWaiting]) {
+				if ([fs isWaiting])
+                {
 					return NO;
-				} else if ([fs isMounted]) {
+				}
+                else if ([fs isMounted])
+                {
 					[(NSMenuItem *)anItem setTitle: @"Unmount"];
-				} else if ([fs isUnmounted] || [fs isFailedToMount]) {
+				}
+                else if ([fs isUnmounted] || [fs isFailedToMount])
+                {
 					[(NSMenuItem*)anItem setTitle: @"Mount"];
 				}
 			}
 			
-			if (action == @selector(revealSelectedFS:)) {
-				if (![fs isMounted]) {
+			if (action == @selector(revealSelectedFS:))
+            {
+				if (![fs isMounted])
+                {
 					return NO;
 				}
 			}
 			
-			if (action == @selector(deleteSelectedFS:)) {
-				if ([fs isMounted] || [fs isWaiting]) {
+			if (action == @selector(deleteSelectedFS:))
+            {
+				if ([fs isMounted] || [fs isWaiting])
+                {
 					return NO;
 				}
 			}
 			
-			if (action == @selector(editSelectedFS:)) {
-				if ([selectedFilesystems count] > 1) {
+			if (action == @selector(editSelectedFS:))
+            {
+				if ([selectedFilesystems count] > 1)
+                {
 					return NO;
 				}
 				
-				if ([fs isMounted] || [fs isWaiting])  {
+				if ([fs isMounted] || [fs isWaiting])
+                {
 					return NO;	
 				}
 			}
@@ -496,16 +572,19 @@
 }
 
 # pragma mark Misc
-- (void)windowWillClose:(NSNotification *)note {
+- (void)windowWillClose:(NSNotification *)note
+{
 	[NSApp terminate:self];
 }
 
-- (IBAction)openMainSite:(id)sender {
+- (IBAction)openMainSite:(id)sender
+{
 	[[NSWorkspace sharedWorkspace] openURL: 
 	 [NSURL URLWithString: @"http://www.macfusionapp.org"]];
 }
 
-- (IBAction)openSupportSite:(id)sender {
+- (IBAction)openSupportSite:(id)sender
+{
 	[[NSWorkspace sharedWorkspace] openURL: 
 	 [NSURL URLWithString: @"http://www.macfusionapp.org/support.html"]];
 }
@@ -513,22 +592,32 @@
 # pragma mark Error Recovery
 - (void)finalFaliureAlertDidEnd:(NSAlert *)alert
 					 returnCode:(NSInteger)returnValue
-					contextInfo:(void *)context {
+					contextInfo:(void *)context
+{
 	[NSApp terminate: self];
 }
 
 - (void)connectionDidDieAlertDidEnd:(NSAlert *)alert
 						 returnCode:(NSInteger)returnValue 
-						contextInfo:(void *)context {
+						contextInfo:(void *)context
+{
 	[[alert window] orderOut:self];
-	if (returnValue == NSAlertFirstButtonReturn) {
+
+	if (returnValue == NSAlertFirstButtonReturn)
+    {
 		[NSApp terminate: self];
-	} else if (returnValue == NSAlertSecondButtonReturn) {
+	}
+    else if (returnValue == NSAlertSecondButtonReturn)
+    {
 		mfcLaunchAgent();
 		[[NSRunLoop currentRunLoop] runUntilDate:[[NSDate date] addTimeInterval: 1.5]];
-		if ([client establishCommunication]) {
+
+		if ([client establishCommunication])
+        {
 			[client fillInitialStatus];
-		} else {
+		}
+        else
+        {
 			NSAlert *finalFaliureAlert = [NSAlert alertWithMessageText:@"Failed to restart Macfusion Agent"
 														 defaultButton:@"Quit"
 													   alternateButton:@"" 
@@ -543,9 +632,10 @@
 	}
 }
 
-- (void)handleConnectionDied {
-		
-	if (mfcClientIsUIElement()) {
+- (void)handleConnectionDied
+{
+	if (mfcClientIsUIElement())
+    {
 		[NSApp terminate:self];
 	}
 	
@@ -565,20 +655,24 @@
 
 #pragma mark Sparkle
 
-- (BOOL)shouldPromptForPermissionToCheckForUpdates {
+- (BOOL)shouldPromptForPermissionToCheckForUpdates
+{
 	return NO;
 }
 
-- (BOOL)shouldPromptForPermissionToCheckForUpdatesToHostBundle:(NSBundle *)bundle {
+- (BOOL)shouldPromptForPermissionToCheckForUpdatesToHostBundle:(NSBundle *)bundle
+{
 	return NO;
 }
 
-- (void)updaterWillRelaunchApplication {
+- (void)updaterWillRelaunchApplication
+{
 	MFLogS(self, @"Sparkle updating in progress");
 	mfcKaboomMacfusion();
 }
 
-- (void)finalize {
+- (void)finalize
+{
 	[super finalize];
 	[client setDelegate:nil];
 }

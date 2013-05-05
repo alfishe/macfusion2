@@ -20,11 +20,15 @@
 #import "MFServerProtocol.h"
 #import "MFConstants.h"
 #import "MFClient.h"
+#import "MFServerFS.h"
+
+@class MFServerFS;
 
 #define LOG_FILE_PATH @"~/Library/Logs/MacFusion2.log"
 
 // Print to logging system
-void MFLog(NSString *format, ...) {
+void MFLog(NSString *format, ...)
+{
 	MFLogging *logger = [MFLogging sharedLogging];
 	
 	// get a reference to the arguments on the stack that follow
@@ -41,7 +45,8 @@ void MFLog(NSString *format, ...) {
 }
 
 
-void MFLogP(int type, NSString *format, ...) {
+void MFLogP(int type, NSString *format, ...)
+{
 	MFLogging *logger = [MFLogging sharedLogging];
 	
 	// get a reference to the arguments on the stack that follow
@@ -56,7 +61,8 @@ void MFLogP(int type, NSString *format, ...) {
 	[logger logMessage:string ofType:type object: nil sender:nil]; 
 }
 
-void MFLogS(id sender, NSString *format, ...) {
+void MFLogS(id sender, NSString *format, ...)
+{
 	MFLogging *logger = [MFLogging sharedLogging];
 	
 	// get a reference to the arguments on the stack that follow
@@ -71,7 +77,8 @@ void MFLogS(id sender, NSString *format, ...) {
 	[logger logMessage:string ofType:0 object:nil sender:sender]; 
 }
 
-void MFLogSO(id sender, id object, NSString *format, ...) {
+void MFLogSO(id sender, id object, NSString *format, ...)
+{
 	MFLogging *logger = [MFLogging sharedLogging];
 	
 	// get a reference to the arguments on the stack that follow
@@ -87,7 +94,8 @@ void MFLogSO(id sender, id object, NSString *format, ...) {
 }
 
 // Print directly to console
-void MFPrint(NSString *format, ...) {
+void MFPrint(NSString *format, ...)
+{
 	// get a reference to the arguments on the stack that follow
     // the format paramter
     va_list argList;
@@ -106,16 +114,20 @@ void MFPrint(NSString *format, ...) {
 
 static MFLogging *sharedLogging = nil;
 
-+ (MFLogging *)sharedLogging {
-	if (sharedLogging == nil) {
-		[[self alloc] init];
++ (MFLogging *)sharedLogging
+{
+	if (sharedLogging == nil)
+    {
+		sharedLogging = [[self alloc] init];
 	}
 	
 	return sharedLogging;
 }
 
-+ (id)allocWithZone:(NSZone *)zone {
-	if (sharedLogging == nil) {
++ (id)allocWithZone:(NSZone *)zone
+{
+	if (sharedLogging == nil)
+    {
 		sharedLogging = [super allocWithZone:zone];
 		return sharedLogging;
 	}
@@ -123,8 +135,10 @@ static MFLogging *sharedLogging = nil;
 	return nil;
 }
 
-- (id)init {
-	if (self = [super init]) {
+- (id)init
+{
+	if (self = [super init])
+    {
 		fd = -1;
 		stdOut = YES;
 		formatter = [NSDateFormatter new];
@@ -135,7 +149,8 @@ static MFLogging *sharedLogging = nil;
 	return self;
 }
 
-- (void)setupLogFile {
+- (void)setupLogFile
+{
 	aslClient = asl_open(NULL, MF_ASL_SERVICE_NAME, 0);
 	
 	fd = open( [[LOG_FILE_PATH stringByExpandingTildeInPath] cStringUsingEncoding: NSUTF8StringEncoding],
@@ -144,30 +159,38 @@ static MFLogging *sharedLogging = nil;
 	asl_set_filter(aslClient, ASL_FILTER_MASK_UPTO(ASL_LEVEL_INFO));
 }
 
-NSDictionary *dictFromASLMessage(aslmsg m) {
+NSDictionary *dictFromASLMessage(aslmsg m)
+{
 	NSMutableDictionary *messageDict = [NSMutableDictionary dictionary];
 	NSInteger i;
 	const char *key;
 	const char *val;
-	for (i = 0; (NULL != (key = asl_key(m, i))); i++) {
+
+	for (i = 0; (NULL != (key = asl_key(m, i))); i++)
+    {
 		val = asl_get(m, key);
-		if (key && val) {
+		if (key && val)
+        {
 			[messageDict setObject:[[NSString alloc] initWithUTF8String:val]
 							forKey:[[NSString alloc] initWithUTF8String:key]];	
 		}
 	}
 	
-	if (![messageDict objectForKey:kMFLogKeyTime]) {
+	if (![messageDict objectForKey:kMFLogKeyTime])
+    {
 		[messageDict setObject:[NSNumber numberWithInt:[[NSDate date] timeIntervalSince1970]] forKey:kMFLogKeyTime];
 	}
+
 	return [messageDict copy];
 }
 
-- (NSDateFormatter*)formatter {
+- (NSDateFormatter*)formatter
+{
 	return formatter;
 }
 
-NSString *headerStringForASLMessageDict(NSDictionary *messageDict) {
+NSString *headerStringForASLMessageDict(NSDictionary *messageDict)
+{
 	MFLogging *self = [MFLogging sharedLogging];
 	NSMutableArray* headerList = [NSMutableArray array];
 	NSString *sender = [messageDict objectForKey:kMFLogKeySender];
@@ -177,19 +200,23 @@ NSString *headerStringForASLMessageDict(NSDictionary *messageDict) {
 	NSDate *date = [NSDate dateWithTimeIntervalSince1970:[[messageDict objectForKey:kMFLogKeyTime] intValue]];;
 	NSString *formattedDate = [[self formatter] stringFromDate:date];
 	
-	if (sender) {
+	if (sender)
+    {
 		[headerList addObject:sender];	
 	}
 	
-	if (subsystem) {
+	if (subsystem)
+    {
 		[headerList addObject: subsystem];
 	}
 		
-	if (uuidFSName) {
+	if (uuidFSName)
+    {
 		[headerList addObject: uuidFSName];
 	}
 		
-	if (formattedDate || [formattedDate length] > 0) {
+	if (formattedDate || [formattedDate length] > 0)
+    {
 		[headerList addObject: formattedDate];
 	}
 		
@@ -199,17 +226,21 @@ NSString *headerStringForASLMessageDict(NSDictionary *messageDict) {
 	return header;
 }
 
-- (void)sendASLMessageDictOverDO:(NSDictionary*)messageDict {
+- (void)sendASLMessageDictOverDO:(NSDictionary*)messageDict
+{
 	id <MFServerProtocol> server = 
 	(id<MFServerProtocol>)[NSConnection rootProxyForConnectionWithRegisteredName:kMFDistributedObjectName host:nil];
 	
-	if (server) 	{
+	if (server)
+    {
 		[server sendASLMessageDict:messageDict];
 	}
 }
 
-- (void)logMessage:(NSString*)message ofType:(NSInteger)type object:(id)object sender:(id)sender {
-	if (fd == -1) {
+- (void)logMessage:(NSString*)message ofType:(NSInteger)type object:(id)object sender:(id)sender
+{
+	if (fd == -1)
+    {
 		[self setupLogFile];
 	}
 		
@@ -217,12 +248,17 @@ NSString *headerStringForASLMessageDict(NSDictionary *messageDict) {
 	message = [message stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
 	aslmsg newASLMessage = asl_new(ASL_TYPE_MSG);
 	asl_set(newASLMessage, ASL_KEY_FACILITY, MF_ASL_SERVICE_NAME);
-	if ([sender isKindOfClass: [MFFilesystem class]]) {
+
+	if ([sender isKindOfClass: [MFFilesystem class]])
+    {
 		asl_set(newASLMessage, ASL_KEY_UUID, [[(MFFilesystem*)sender uuid] UTF8String]);
 	}
-	if ([object isKindOfClass: [MFFilesystem class]]) {
+
+	if ([object isKindOfClass: [MFFilesystem class]])
+    {
 		asl_set(newASLMessage, ASL_KEY_UUID, [[(MFFilesystem*)object uuid] UTF8String]);
 	}
+
 	asl_set(newASLMessage, ASL_KEY_SUBSYSTEM, [[[sender class] description] UTF8String]);
 	asl_set(newASLMessage, ASL_KEY_MSG, [message UTF8String]);
 	asl_log(aslClient, newASLMessage, ASL_LEVEL_ERR, "%s", [message UTF8String]);
@@ -230,6 +266,7 @@ NSString *headerStringForASLMessageDict(NSDictionary *messageDict) {
 	// Send to other macfusion system processes over DO
 	NSDictionary *messageDict = dictFromASLMessage(newASLMessage);
 	asl_free(newASLMessage);
+
 	[self sendASLMessageDictOverDO:messageDict];
 }
 
@@ -238,10 +275,9 @@ NSString *headerStringForASLMessageDict(NSDictionary *messageDict) {
 	stdOut = b;
 }
 
-- (void)finalize {
+- (void)dealloc {
 	asl_close(aslClient);
 	close(fd);
-	[super finalize];
 }
 
 @synthesize delegate;

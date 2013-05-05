@@ -18,8 +18,8 @@
 #import "MFFilesystem.h"
 #import "MFServerFSProtocol.h"
 #import "MFClientFSDelegateProtocol.h"
-
-@class MFClientPlugin;
+#import "MFServerFS.h"
+#import "MFClientPlugin.h"
 
 @interface MFClientFS : MFFilesystem {
 	id<MFServerFSProtocol> remoteFilesystem;
@@ -59,6 +59,6 @@
 - (NSImage *)coloredImage;
 
 @property(readwrite, assign) NSInteger displayOrder;
-@property(readwrite, retain) id<MFClientFSDelegateProtocol> clientFSDelegate; 
-@property(readonly) NSImage *iconImage;
+@property(readwrite, strong) id<MFClientFSDelegateProtocol> clientFSDelegate; 
+@property(weak, readonly) NSImage *iconImage;
 @end

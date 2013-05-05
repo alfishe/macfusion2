@@ -20,7 +20,7 @@
 #import <Cocoa/Cocoa.h>
 
 @interface MFLogReader : NSObject {
-	NSMutableArray *logMessages;
+	NSMutableArray *__weak logMessages;
 	BOOL isRunning;
 }
 
@@ -29,5 +29,5 @@
 - (void)start;
 - (BOOL)isRunning;
 
-@property(readonly) NSArray *logMessages;
+@property(weak, readonly) NSArray *logMessages;
 @end

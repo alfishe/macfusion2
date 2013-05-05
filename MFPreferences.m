@@ -23,15 +23,18 @@ static MFPreferences *sharedPreferences = nil;
 
 + (MFPreferences *) sharedPreferences
 {
-	if (sharedPreferences == nil) {
-		[[self alloc] init];
+	if (sharedPreferences == nil)
+    {
+		sharedPreferences = [[self alloc] init];
 	}
 	
 	return sharedPreferences;
 }
 
-+ (id)allocWithZone:(NSZone *)zone {
-	if (sharedPreferences == nil) {
++ (id)allocWithZone:(NSZone *)zone
+{
+	if (sharedPreferences == nil)
+    {
 		sharedPreferences = [super allocWithZone:zone];
 		return sharedPreferences;
 	}
@@ -44,16 +47,21 @@ void prefsFSEventCallBack(ConstFSEventStreamRef streamRef,
 						  size_t numEvents, 
 						  void *eventPaths, 
 						  const FSEventStreamEventFlags eventFlags[], 
-						  const FSEventStreamEventId eventIds[]) {
+						  const FSEventStreamEventId eventIds[])
+{
 	MFLogS([MFPreferences sharedPreferences],@"Prefs update FSEvents callback received");
 	[[MFPreferences sharedPreferences] readPrefsFromDisk];
 }
 
-- (id)init {
-	if (self = [super init]) {
+- (id)init
+{
+	if (self = [super init])
+    {
 		NSString* fullPrefsFilePath = [PREFS_FILE_PATH stringByExpandingTildeInPath];
 		NSDictionary* readFromDisk = [NSDictionary dictionaryWithContentsOfFile: fullPrefsFilePath];
-		if (!readFromDisk) {
+
+		if (!readFromDisk)
+        {
 			_firstTimeRun = YES;
 		}
 		
@@ -61,7 +69,7 @@ void prefsFSEventCallBack(ConstFSEventStreamRef streamRef,
 		FSEventStreamRef eventStream = FSEventStreamCreate(NULL, 
 														   prefsFSEventCallBack, 
 														   NULL, 
-														   (CFArrayRef)[NSArray arrayWithObject: [fullPrefsFilePath stringByDeletingLastPathComponent]],
+														   (__bridge CFArrayRef)[NSArray arrayWithObject: [fullPrefsFilePath stringByDeletingLastPathComponent]],
 														   kFSEventStreamEventIdSinceNow, 
 														   0, 
 														   kFSEventStreamCreateFlagUseCFTypes);
@@ -73,24 +81,31 @@ void prefsFSEventCallBack(ConstFSEventStreamRef streamRef,
 	return self;
 }
 
-- (BOOL)firstTimeRun {
+- (BOOL)firstTimeRun
+{
 	return _firstTimeRun;
 }
 
-- (void)readPrefsFromDisk {
+- (void)readPrefsFromDisk
+{
 	NSString *fullPrefsFilePath = [PREFS_FILE_PATH stringByExpandingTildeInPath];
 	NSDictionary *readFromDisk = [NSDictionary dictionaryWithContentsOfFile: fullPrefsFilePath];
-	for(NSString *key in [readFromDisk allKeys]) {
+	for(NSString *key in [readFromDisk allKeys])
+    {
 		id diskValue = [readFromDisk objectForKey: key];
-		if (![diskValue isEqualTo: [self getValueForPreference: key]]) {
+
+		if (![diskValue isEqualTo: [self getValueForPreference: key]])
+        {
 			[self setValue:diskValue forPreference:key];
 		}
 	}
 }
 
-- (void)setValue:(id)value forPreference:(NSString*)prefKey {
+- (void)setValue:(id)value forPreference:(NSString*)prefKey
+{
 	// MFLogS(self, @"Setting value %@ for key %@", value, prefKey);
-	if (value != [self getValueForPreference:prefKey]) {
+	if (value != [self getValueForPreference:prefKey])
+    {
 		[self willChangeValueForKey:prefKey];
 		[_prefsDict setObject:value forKey:prefKey];
 		[self didChangeValueForKey:prefKey];
@@ -98,14 +113,20 @@ void prefsFSEventCallBack(ConstFSEventStreamRef streamRef,
 	}
 }
 
-- (id)defaultValueForPrefKey:(NSString *)key {
-	if ([key isEqualToString:kMFPrefsAutoScrollLog]) {
+- (id)defaultValueForPrefKey:(NSString *)key
+{
+	if ([key isEqualToString:kMFPrefsAutoScrollLog])
+    {
 		return [NSNumber numberWithBool: YES];
 	}
-	if ([key isEqualToString:kMFPrefsTimeout]) {
+
+	if ([key isEqualToString:kMFPrefsTimeout])
+    {
 		return [NSNumber numberWithFloat: 5.0];
 	}
-	if ([key isEqualToString: kMFPrefsAutosize]) {
+
+	if ([key isEqualToString: kMFPrefsAutosize])
+    {
 		return [NSNumber numberWithBool: YES];
 	}
 	
@@ -113,47 +134,62 @@ void prefsFSEventCallBack(ConstFSEventStreamRef streamRef,
 }
 
 
-- (id)getValueForPreference:(NSString *)prefKey {
+- (id)getValueForPreference:(NSString *)prefKey
+{
 	id value = [_prefsDict objectForKey: prefKey];
-	if (value) {
+
+	if (value)
+    {
 		return value;
-	} else {
+	}
+    else
+    {
 		return [self defaultValueForPrefKey: prefKey];
 	}
 }
 
-- (void)writePrefs {
+- (void)writePrefs
+{
 	NSString *fullPrefsFilePath = [PREFS_FILE_PATH stringByExpandingTildeInPath];
 	NSString *dirPath = [fullPrefsFilePath stringByDeletingLastPathComponent];
 	BOOL isDir;
-	if (!([[NSFileManager defaultManager] fileExistsAtPath:dirPath isDirectory:&isDir] && isDir)) {
+
+	if (!([[NSFileManager defaultManager] fileExistsAtPath:dirPath isDirectory:&isDir] && isDir))
+    {
 		NSError *dirCreateError;
 		BOOL dirCreateOK = [[NSFileManager defaultManager] createDirectoryAtPath:dirPath withIntermediateDirectories:YES attributes:nil error:&dirCreateError];
-		if (!dirCreateOK) {
+
+		if (!dirCreateOK)
+        {
 			MFLogS(self, @"Failed to create dir for prefs. Error %@", dirCreateError);
 			return;
 		}
 	}
 	
 	BOOL ok = [_prefsDict writeToFile:fullPrefsFilePath atomically:YES];
-	if (!ok) {
+	if (!ok)
+    {
 		MFLogS(self, @"Failed to write prefs");
 	}
 }
 
-- (BOOL)getBoolForPreference:(NSString*)prefKey {
+- (BOOL)getBoolForPreference:(NSString*)prefKey
+{
 	return [[self getValueForPreference: prefKey] boolValue];
 }
 
-- (void)setBool:(BOOL)value forPreference:(NSString*)prefKey {
+- (void)setBool:(BOOL)value forPreference:(NSString*)prefKey
+{
 	[self setValue:[NSNumber numberWithBool:value] forPreference:prefKey];
 }
 
-- (id)valueForUndefinedKey:(NSString *)key {
+- (id)valueForUndefinedKey:(NSString *)key
+{
 	return [self getValueForPreference: key];
 }
 
-- (void)setValue:(id)value forUndefinedKey:(NSString *)key {
+- (void)setValue:(id)value forUndefinedKey:(NSString *)key
+{
 	[self setValue:value forPreference:key];
 }
 

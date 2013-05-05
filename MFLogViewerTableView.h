@@ -21,8 +21,8 @@
 
 
 @interface MFLogViewerTableView : NSTableView <NSTableViewDelegate, NSTableViewDataSource> {
-	NSArray* _logMessages;
+	NSArray* __weak _logMessages;
 }
 
-@property(readonly) NSArray* logMessages;
+@property(weak, readonly) NSArray* logMessages;
 @end

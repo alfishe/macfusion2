@@ -22,11 +22,11 @@
 
 @interface MFClient : NSObject <MFClientProtocol> {
 	NSMutableDictionary *filesystemsDictionary;
-	NSMutableArray *persistentFilesystems;
-	NSMutableArray *temporaryFilesystems;
+	NSMutableArray *__weak persistentFilesystems;
+	NSMutableArray *__weak temporaryFilesystems;
 	NSMutableDictionary *pluginsDictionary;
-	NSMutableArray *plugins;
-	NSMutableArray *recents;
+	NSMutableArray *__weak plugins;
+	NSMutableArray *__weak recents;
 	id <MFServerProtocol> server;
 	id<MFClientDelegateProtocol> delegate;
 	NSConnection *connection;
@@ -49,19 +49,19 @@
 - (MFClientFS *)filesystemWithUUID:(NSString *)uuid;
 - (MFClientPlugin *)pluginWithID:(NSString *)id;
 
-@property(retain) id delegate;
+@property(strong) id delegate;
 
 // All filesystems, including temporary ones
-@property(readonly) NSArray *filesystems;
+@property(weak, readonly) NSArray *filesystems;
 
 // Only filesystems that are not temporary
-@property(readonly) NSArray *persistentFilesystems;
-@property(readonly) NSArray *temporaryFilesystems;
-@property(readonly) NSArray *mountedFilesystems;
+@property(weak, readonly) NSArray *persistentFilesystems;
+@property(weak, readonly) NSArray *temporaryFilesystems;
+@property(weak, readonly) NSArray *mountedFilesystems;
 
 // All plugins
-@property (readonly) NSArray *plugins;
-@property(readonly) NSArray *recents;
+@property (weak, readonly) NSArray *plugins;
+@property(weak, readonly) NSArray *recents;
 
 // UI Stuff
 - (void)moveUUIDS:(NSArray *)uuid toRow:(NSUInteger)row;

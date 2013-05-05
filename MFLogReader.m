@@ -29,16 +29,20 @@
 
 static MFLogReader *sharedReader;
 
-+ (MFLogReader *)sharedReader {
-	if (sharedReader == nil) {
-		[[self alloc] init];	
++ (MFLogReader *)sharedReader
+{
+	if (sharedReader == nil)
+    {
+		sharedReader = [[self alloc] init];
 	}
 	
 	return sharedReader;
 }
 
-+ (id)allocWithZone:(NSZone *)zone {
-	if (sharedReader == nil) {
++ (id)allocWithZone:(NSZone *)zone
+{
+	if (sharedReader == nil)
+    {
 		sharedReader = [super allocWithZone: zone];
 		return sharedReader;
 	}
@@ -46,13 +50,15 @@ static MFLogReader *sharedReader;
 	return nil;
 }
 
-- (void)addASLEntries:(NSArray*)array {
+- (void)addASLEntries:(NSArray*)array
+{
 	[self willChangeValueForKey:@"logMessages"];
 	[logMessages addObjectsFromArray: array];
 	[self didChangeValueForKey:@"logMessages"];
 }
 
-- (void)readEntriesFromASL {	
+- (void)readEntriesFromASL
+{
 	aslmsg q = asl_new(ASL_TYPE_QUERY);
 	aslmsg m;
 
@@ -61,7 +67,8 @@ static MFLogReader *sharedReader;
 	aslresponse r = asl_search(NULL, q);
 	NSMutableArray *logMessagesToAdd = [NSMutableArray array];
 	
-	while (NULL != (m = aslresponse_next(r))) {
+	while (NULL != (m = aslresponse_next(r)))
+    {
 		NSDictionary *dict = dictFromASLMessage(m);
 		[logMessagesToAdd addObject:dict];
 	}
@@ -70,12 +77,15 @@ static MFLogReader *sharedReader;
 	[self performSelectorOnMainThread:@selector(addASLEntries:) withObject:logMessagesToAdd waitUntilDone:NO];
 }
 
-- (void)recordASLMessageDict:(NSDictionary*)messageDict {
+- (void)recordASLMessageDict:(NSDictionary*)messageDict
+{
 	[[self mutableArrayValueForKey: @"logMessages"] addObject:messageDict];
 }
 
-- (id)init {
-	if (self = [super init]) {
+- (id)init
+{
+	if (self = [super init])
+    {
 		logMessages = [NSMutableArray array];
 		[NSThread detachNewThreadSelector:@selector(readEntriesFromASL) toTarget:self withObject:nil];
 		isRunning = NO;
@@ -84,11 +94,13 @@ static MFLogReader *sharedReader;
 	return self;
 }
 
-- (BOOL)isRunning {
+- (BOOL)isRunning
+{
 	return isRunning;
 }
 
-- (void)start {
+- (void)start
+{
 	isRunning = YES;
 }
 

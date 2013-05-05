@@ -23,7 +23,7 @@
 
 - (id)initWithParameterDictionary:(NSDictionary *)params;
 
-@property(readonly, retain) NSDictionary *parameterDictionary;
-@property(readonly) NSString *descriptionString;
+@property(readonly, strong) NSDictionary *parameterDictionary;
+@property(weak, readonly) NSString *descriptionString;
 
 @end

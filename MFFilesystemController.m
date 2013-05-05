@@ -59,13 +59,16 @@ static MFFilesystemController* sharedController = nil;
 - (void)registerGeneralNotifications {
 }
 
-- (id) init {
-	if (self = [super init]) {
+- (id) init
+{
+	if (self = [super init])
+    {
 		_filesystemsDictionary = [NSMutableDictionary dictionary];
 		_filesystems = [NSMutableArray array];
 		_mountedPaths = [NSMutableArray array];
 		_recents = [NSMutableArray array];
 		_tokens = [NSMutableDictionary dictionary];
+
 		[self loadFilesystems];
 		[self loadRecentFilesystems];
 		[self setUpVolumeMonitoring];
@@ -74,83 +77,108 @@ static MFFilesystemController* sharedController = nil;
 	return self;
 }
 
-+ (NSSet *)keyPathsForValuesAffectingFilesystems {
++ (NSSet *)keyPathsForValuesAffectingFilesystems
+{
 	return [NSSet setWithObjects:@"filesystemsDictionary", nil];
 }
 
-- (id)copyWithZone:(NSZone*)zone {
+- (id)copyWithZone:(NSZone*)zone
+{
 	return self;
 }
 
 #pragma mark Filesystem loading
-- (NSArray *)pathsToFilesystemDefs {
+- (NSArray *)pathsToFilesystemDefs
+{
 	BOOL isDir = NO;
 	NSFileManager *fm = [NSFileManager defaultManager];
 	NSArray *libraryPaths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, 																NSAllDomainsMask - NSSystemDomainMask, YES);
 	NSMutableArray *fsDefSearchPaths = [NSMutableArray array];
 	NSMutableArray *fsDefPaths = [NSMutableArray array];
 	
-	for(NSString *path in libraryPaths) {
+	for (NSString *path in libraryPaths)
+    {
 		NSString *specificPath = [path stringByAppendingPathComponent:@"Macfusion/Filesystems/"];
-		if ([fm fileExistsAtPath:specificPath isDirectory:&isDir] && isDir) {
+		if ([fm fileExistsAtPath:specificPath isDirectory:&isDir] && isDir)
+        {
 			[fsDefSearchPaths addObject:specificPath];
 		}
 	}
 	
-	for(NSString *path in fsDefSearchPaths) {
-		for(NSString *fsDefPath in [fm contentsOfDirectoryAtPath:path error:NULL]) {
-			if ([[fsDefPath pathExtension] isEqualToString:FSDEF_EXTENSION]) {
+	for(NSString *path in fsDefSearchPaths)
+    {
+		for(NSString *fsDefPath in [fm contentsOfDirectoryAtPath:path error:NULL])
+        {
+			if ([[fsDefPath pathExtension] isEqualToString:FSDEF_EXTENSION])
+            {
 				[fsDefPaths addObject:[path stringByAppendingPathComponent: fsDefPath]];
 			}
 		}
 	}
 	
-	return [[fsDefPaths copy] autorelease];
+	return [fsDefPaths copy];
 }
 
-- (void)loadFilesystems {
+- (void)loadFilesystems
+{
 	NSArray *filesystemPaths = [self pathsToFilesystemDefs];
 	NSDictionary *cacheDict = [NSDictionary dictionaryWithContentsOfFile:[CACHE_PATH stringByExpandingTildeInPath]];
 							   
-	for(NSString *fsPath in filesystemPaths) {
+	for (NSString *fsPath in filesystemPaths)
+    {
 		MFLogS(self, @"Loading fs at %@", fsPath);
 
 		NSError *error;
 		MFServerFS *fs = [MFServerFS loadFilesystemAtPath:fsPath error:&error];
-		if (fs) {
-			[self storeFilesystem: fs ];
-			if ([[[NSFileManager defaultManager] contentsOfDirectoryAtPath:fs.mountPath error:NULL] count] > 0 && ([[cacheDict objectForKey: fs.uuid] isEqualToString: fs.mountPath])) {
+		if (fs)
+        {
+			[self storeFilesystem: fs];
+
+			if ([[[NSFileManager defaultManager] contentsOfDirectoryAtPath:fs.mountPath error:NULL] count] > 0 &&
+                ([[cacheDict objectForKey: fs.uuid] isEqualToString: fs.mountPath]))
+            {
 				MFLogSO(self, fs, @"Detected Already Mounted fs %@", fs);
 				[fs handleMountNotification];
 			}
-		} else {
+		}
+        else
+        {
 			MFLogS(self, @"Failed to load FS. Error: %@", [error localizedDescription]);
 		}
 	}
 }
 
 #pragma mark Action methods
-- (MFServerFS *)newFilesystemWithPlugin:(MFServerPlugin *)plugin {
+- (MFServerFS *)newFilesystemWithPlugin:(MFServerPlugin *)plugin
+{
 	MFServerFS *fs = [MFServerFS newFilesystemWithPlugin:plugin];
-	if (fs) {
+	if (fs)
+    {
 		[self storeFilesystem:fs];
 		return fs;
-	} else {
+	}
+    else
+    {
 		MFLogSO(self, plugin, @"Failed to create new filesystem with plugin %@", plugin);
 		return nil;
 	}
 }
 
-- (MFServerFS *)quickMountWithURL:(NSURL *)url error:(NSError **)error {
+- (MFServerFS *)quickMountWithURL:(NSURL *)url error:(NSError **)error
+{
 	MFServerPlugin *plugin = nil;
-	for(MFServerPlugin *p in [[MFPluginController sharedController] plugins]) {
+
+	for (MFServerPlugin *p in [[MFPluginController sharedController] plugins])
+    {
 		if ([[[p delegate] urlSchemesHandled] containsObject:[url scheme]])
 			plugin = p;
 	}
 	
-	if (!plugin) {
+	if (!plugin)
+    {
 		NSString* description = [NSString stringWithFormat:@"No plugin for URLs of type %@", [url scheme]];
-		if (error) {
+		if (error)
+        {
 			*error = [MFError errorWithErrorCode:kMFErrorCodeNoPluginFound description:description];
 		}
 		
@@ -163,7 +191,8 @@ static MFFilesystemController* sharedController = nil;
 	return fs;
 }
 
-- (void)deleteFilesystem:(MFServerFS *)fs {
+- (void)deleteFilesystem:(MFServerFS *)fs
+{
 	if (fs.filePath) {
 		[[NSFileManager defaultManager] removeItemAtPath:fs.filePath error:NULL];
 	}
@@ -171,51 +200,66 @@ static MFFilesystemController* sharedController = nil;
 }
 
 #pragma mark Recents Managment
-- (void)writeRecentFilesystems {
+- (void)writeRecentFilesystems
+{
 	 NSString *recentsPath = [RECENTS_PATH stringByExpandingTildeInPath];
 	 BOOL isDir;
 	 
-	 if (![[NSFileManager defaultManager] fileExistsAtPath:[recentsPath stringByDeletingLastPathComponent] isDirectory:&isDir] || !isDir) {
+	 if (![[NSFileManager defaultManager] fileExistsAtPath:[recentsPath stringByDeletingLastPathComponent] isDirectory:&isDir] || !isDir)
+     {
 		 NSError *error = nil;
 		 BOOL ok = [[NSFileManager defaultManager] createDirectoryAtPath:recentsPath withIntermediateDirectories:YES attributes:nil error:&error];
-		 if (!ok) {
+
+		 if (!ok)
+         {
 			 MFLogS(self, @"Failed to create directory for writing recents: %@", [error localizedDescription]);
 		 }
 	 }
 	
 	BOOL writeOK = [_recents writeToFile: recentsPath atomically:NO];
-	if (!writeOK) {
+	if (!writeOK)
+    {
 		MFLogS(self, @"Could not write recents to file!");
 	}
 }
 
-- (void)loadRecentFilesystems {
+- (void)loadRecentFilesystems
+{
 	NSString *filePath = [RECENTS_PATH stringByExpandingTildeInPath];
 	NSArray *recentsRead =[NSArray arrayWithContentsOfFile:filePath];
 	[[self mutableArrayValueForKey:@"recents"] removeAllObjects];
 	
-	if (!recentsRead) {
+	if (!recentsRead)
+    {
 		MFLogS(self, @"Could not read recents from file at path %@", filePath);
-	} else {
+	}
+    else
+    {
 		[[self mutableArrayValueForKey:@"recents"] addObjectsFromArray: recentsRead];
 	}
 }
 
-- (void)recordRecentFilesystem:(MFServerFS *)fs {
-	NSMutableDictionary *params = [[fs.parameters mutableCopy] autorelease];
+- (void)recordRecentFilesystem:(MFServerFS *)fs
+{
+	NSMutableDictionary *params = [fs.parameters mutableCopy];
 	// Strip the UUID so it never repeats
 	[params setValue:nil forKey:kMFFSUUIDParameter];
 	
-	for(NSDictionary *recent in _recents) {
+	for (NSDictionary *recent in _recents)
+    {
 		BOOL equal = YES;
-		for(NSString *key in [recent allKeys]) {
+		for (NSString *key in [recent allKeys])
+        {
 			equal = ([[recent objectForKey:key] isEqual:[params objectForKey:key]]);
-			if (!equal) {
+
+			if (!equal)
+            {
 				break;
 			}
 		}
 		
-		if (equal) {
+		if (equal)
+        {
 			// MFLogS(self, @"Duplicate recents detected, %@ and %@",params, recent);
 			// We already have this exact dictionary in recents. Don't add it.
 			return; 
@@ -223,20 +267,25 @@ static MFFilesystemController* sharedController = nil;
 	}
 	
 	[[self mutableArrayValueForKey:@"recents"] addObject:params];
-	if ([_recents count] > 10) {
+
+	if ([_recents count] > 10)
+    {
 		[_recents removeObjectAtIndex: 0];
 	}
+
 	[self writeRecentFilesystems];
 }
 
 #pragma mark Volume monitoring
-static void diskMounted(DADiskRef disk, void *mySelf) {
+static void diskMounted(DADiskRef disk, void *mySelf)
+{
 	CFDictionaryRef description = DADiskCopyDescription(disk);
 	CFURLRef pathURL = CFDictionaryGetValue(description, kDADiskDescriptionVolumePathKey);
 	
-	if (pathURL) {
+	if (pathURL)
+    {
 		CFStringRef tempPath = CFURLCopyFileSystemPath(pathURL,kCFURLPOSIXPathStyle);
-		NSString *path = [(NSString *)tempPath stringByStandardizingPath];
+		NSString *path = [(__bridge NSString *)tempPath stringByStandardizingPath];
 		CFRelease(tempPath);
 		
 		[[MFFilesystemController sharedController] addMountedPath:path];
@@ -246,13 +295,15 @@ static void diskMounted(DADiskRef disk, void *mySelf) {
 }
 
 
-static void diskUnMounted(DADiskRef disk, void *mySelf) {
+static void diskUnMounted(DADiskRef disk, void *mySelf)
+{
 	CFDictionaryRef description = DADiskCopyDescription(disk);
 	CFURLRef pathURL = CFDictionaryGetValue(description, kDADiskDescriptionVolumePathKey);
 	
-	if (pathURL) {
+	if (pathURL)
+    {
 		CFStringRef tempPath = CFURLCopyFileSystemPath(pathURL,kCFURLPOSIXPathStyle);
-		NSString *path = [(NSString*)tempPath stringByStandardizingPath];
+		NSString *path = [(__bridge NSString*)tempPath stringByStandardizingPath];
 		CFRelease(tempPath);
 		
 		[[MFFilesystemController sharedController] removeMountedPath:path];
@@ -268,75 +319,92 @@ static void diskUnMounted(DADiskRef disk, void *mySelf) {
 	DASessionScheduleWithRunLoop(_appearSession, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
 	DASessionScheduleWithRunLoop(_disappearSession, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
 	
-	DARegisterDiskAppearedCallback(_appearSession, kDADiskDescriptionMatchVolumeMountable, diskMounted, self);
-	DARegisterDiskDisappearedCallback(_disappearSession, kDADiskDescriptionMatchVolumeMountable, diskUnMounted, self);
+	DARegisterDiskAppearedCallback(_appearSession, kDADiskDescriptionMatchVolumeMountable, diskMounted, (__bridge void *)(self));
+	DARegisterDiskDisappearedCallback(_disappearSession, kDADiskDescriptionMatchVolumeMountable, diskUnMounted, (__bridge void *)(self));
 	
 	// Make the evenets go through
-	CFRunLoopRunInMode( kCFRunLoopDefaultMode, 1, YES );
+	CFRunLoopRunInMode(kCFRunLoopDefaultMode, 1, YES);
 }
 
-- (void)updateStatusForFilesystem:(MFServerFS *)fs {
-	if ([_mountedPaths containsObject: fs.mountPath]) {
+- (void)updateStatusForFilesystem:(MFServerFS *)fs
+{
+	if ([_mountedPaths containsObject: fs.mountPath])
+    {
 		[fs handleMountNotification];
 	}
 }
 
 # pragma mark Self-monitoring
-- (void)registerObservationOnFilesystem:(MFServerFS *)fs {
+- (void)registerObservationOnFilesystem:(MFServerFS *)fs
+{
 	[fs addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionNew context:nil];
 }
 
-- (void)unregisterObservationOnFilesystem:(MFServerFS *)fs {
+- (void)unregisterObservationOnFilesystem:(MFServerFS *)fs
+{
 	[fs removeObserver:self forKeyPath:@"status"];
 }
 
-- (void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+- (void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
+{
 //	NSLog(@"MFFilesystemController observes: keypath %@, object %@, change %@",keyPath, object, change);
 	NSString *newStatus = [change objectForKey:NSKeyValueChangeNewKey];
 	MFServerFS *fs = object;
 	
 	// Remove temporarily filesystems if they fail to mount
-	if ([newStatus isEqualToString:kMFStatusFSFailed] && ![fs isPersistent]) {
+	if ([newStatus isEqualToString:kMFStatusFSFailed] && ![fs isPersistent])
+    {
 		[self performSelector:@selector(removeFilesystem:) withObject:fs afterDelay:0];
 	}
-	if ([newStatus isEqualToString:kMFStatusFSFailed]) {
+
+	if ([newStatus isEqualToString:kMFStatusFSFailed])
+    {
 		[self invalidateTokensForFS: fs];
 	}
 }
 
 # pragma mark Security Tokens
-- (NSString *)tokenForFilesystem:(MFServerFS *)fs {
-	CFUUIDRef uuidObject = CFUUIDCreate(NULL);
-    CFStringRef uuidCFString = CFUUIDCreateString(NULL, uuidObject);
-    CFRelease(uuidObject);
-    NSString *tokenString = [NSMakeCollectable(uuidCFString) autorelease];
-	if ([[_tokens allValues] containsObject: fs]) {
+- (NSString *)tokenForFilesystem:(MFServerFS *)fs
+{
+    CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
+    NSString* result = (__bridge_transfer NSString *)CFUUIDCreateString(kCFAllocatorDefault, uuid);
+    CFRelease(uuid);
+    
+	if ([[_tokens allValues] containsObject: fs])
+    {
 		MFLogSO(self, fs, @"Uh oh ... adding a second token for an FS already in tokens");
 		// MFLogSO(self, _tokens, @"Tokens Before %@", _tokens);
 	}
 	
-	[_tokens setObject: fs forKey: tokenString];
+	[_tokens setObject: fs forKey: result];
 	// MFLogS(self, @"Returning token %@ for fs %@", tokenString, fs);
-	return tokenString;
+    
+	return result;
 }
 
-- (void)invalidateToken:(NSString *)token {
+- (void)invalidateToken:(NSString *)token
+{
 	MFLogS(self, @"Invalidating token %@", token);
 	NSAssert(token, @"Token is nil in invalidateToken");
 	NSAssert([[_tokens allKeys] containsObject: token], @"Invalid token in invalidateToken");
+
 	[_tokens removeObjectForKey: token];
 }
 
-- (void)invalidateTokensForFS:(MFServerFS *)fs {
-	for(NSString *key in [_tokens allKeys]) {
+- (void)invalidateTokensForFS:(MFServerFS *)fs
+{
+	for(NSString *key in [_tokens allKeys])
+    {
 		if ([_tokens objectForKey: key] == fs)
 			[_tokens removeObjectForKey: key];
 	}
 }
 
-- (MFServerFS *)filesystemForToken:(NSString *)token {
+- (MFServerFS *)filesystemForToken:(NSString *)token
+{
 	NSAssert(token, @"Token nil in filesystemForToken");
-	if (![[_tokens allKeys] containsObject: token]) {
+	if (![[_tokens allKeys] containsObject: token])
+    {
 		MFLogS(self, @"Invalid token in filesystemsForToken: %@", token);
 	}
 	
@@ -344,7 +412,8 @@ static void diskUnMounted(DADiskRef disk, void *mySelf) {
 }
 
 # pragma mark Filesystem Persistence
-- (void)updateFSPersistenceCache {
+- (void)updateFSPersistenceCache
+{
 	NSArray *mountedFilesystems = [self.filesystems filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self.status == %@", kMFStatusFSMounted]];
 	// MFLogS(self, @"Updating Cache. Mounted Filesystems %@", mountedFilesystems);
 	NSDictionary *mountedDict = [NSDictionary dictionaryWithObjects:(NSArray*)[mountedFilesystems valueForKey:@"mountPath"]
@@ -355,63 +424,81 @@ static void diskUnMounted(DADiskRef disk, void *mySelf) {
 }
 
 # pragma mark Accessors and Getters
-- (void)storeFilesystem:(MFServerFS *)fs {
+- (void)storeFilesystem:(MFServerFS *)fs
+{
 	NSAssert(fs && fs.uuid, @"FS or uuid is nil, storeFilesystem in MFFilesystemController");
 	[_filesystemsDictionary setObject: fs forKey: fs.uuid];
-	if ([_filesystems indexOfObject:fs] == NSNotFound) {
+
+	if ([_filesystems indexOfObject:fs] == NSNotFound)
+    {
 		[[self mutableArrayValueForKey:@"filesystems"] addObject: fs];
 		[self registerObservationOnFilesystem: fs];
 	}
 }
 
-- (void)removeFilesystem:(MFServerFS *)fs {
+- (void)removeFilesystem:(MFServerFS *)fs
+{
 	NSAssert(fs, @"Asked to remove nil fs in MFFilesystemController");
 	NSAssert([fs isUnmounted] || [fs isFailedToMount], @"Asked to remove fs in mounted or waiting state");
 	[fs removeMountPoint];
 	[_filesystemsDictionary removeObjectForKey: fs.uuid];
-	if ([_filesystems indexOfObject:fs] != NSNotFound) {
+
+	if ([_filesystems indexOfObject:fs] != NSNotFound)
+    {
 		[[self mutableArrayValueForKey:@"filesystems"] removeObject: fs];
 	}
 }
 
-- (MFServerFS *)filesystemWithUUID:(NSString *)uuid {
+- (MFServerFS *)filesystemWithUUID:(NSString *)uuid
+{
 	NSAssert(uuid, @"UUID nill in filesystemWithUUID");
 	return [_filesystemsDictionary objectForKey:uuid];
 }
 
-- (NSDictionary *)filesystemsDictionary {
+- (NSDictionary *)filesystemsDictionary
+{
 	return (NSDictionary *)_filesystemsDictionary;
 }
 
-- (void)addMountedPath:(NSString *)path {
+- (void)addMountedPath:(NSString *)path
+{
 //	MFLogS(self, @"Adding mounted path %@", path);
 	NSAssert(path, @"Mounted Path nil in MFFilesystemControlled addMountedPath");
-	if (![_mountedPaths containsObject: path]) {
+	if (![_mountedPaths containsObject: path])
+    {
 		[_mountedPaths addObject:path];
-		for(MFServerFS *fs in _filesystems) {
+
+		for (MFServerFS *fs in _filesystems)
+        {
 			if ([fs.mountPath isEqualToString: path] && ([fs isWaiting] )) {
 				[fs handleMountNotification];
 				[self invalidateTokensForFS: fs];
 				[self updateFSPersistenceCache];
 			}
 			
-			if (![fs isPersistent]) {
+			if (![fs isPersistent])
+            {
 				[self recordRecentFilesystem: fs];
 			}
 		}
 	}
 }
 
-- (void)removeMountedPath:(NSString *)path {
+- (void)removeMountedPath:(NSString *)path
+{
 	NSAssert(path, @"Mounted Path nil in MFFilesystemControlled removeMountedPath");
-	if ([_mountedPaths containsObject:path]) {
+
+	if ([_mountedPaths containsObject:path])
+    {
 		[_mountedPaths removeObject:path];
 		NSArray *matchingFilesystems = [_filesystems filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self.mountPath == %@", path]];
 		[matchingFilesystems makeObjectsPerformSelector:@selector(handleUnmountNotification)];
 		[self updateFSPersistenceCache];
 		
 		NSArray *matchingTemporaryFilesystems = [matchingFilesystems filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self.isPersistent != YES"]];
-		for(MFServerFS *fs in matchingTemporaryFilesystems) {
+
+		for (MFServerFS *fs in matchingTemporaryFilesystems)
+        {
 			[self removeFilesystem:fs];
 		}
 	}

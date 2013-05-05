@@ -184,15 +184,21 @@
 	return initialStatusInfo;
 }
 
-- (NSString *)getNewUUID {
-	CFUUIDRef uuidObject = CFUUIDCreate(NULL);
-    CFStringRef uuidCFString = CFUUIDCreateString(NULL, uuidObject);
-    CFRelease(uuidObject);
-	return [NSMakeCollectable(uuidCFString) autorelease];
+- (NSString *)getNewUUID
+{
+    CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
+    NSString* result = (__bridge_transfer NSString *)CFUUIDCreateString(kCFAllocatorDefault, uuid);
+    CFRelease(uuid);
+    
+	return result;
+    
+    // For 10.8 we can use
+    // NSString *uuidString = [[NSUUID UUID] UUIDString];
 }
 
 
-- (NSDictionary *)defaultParameterDictionary {
+- (NSDictionary *)defaultParameterDictionary
+{
 	NSMutableDictionary *defaultParameterDictionary = [NSMutableDictionary dictionary];
 	NSDictionary *delegateDict = [delegate defaultParameterDictionary];
 	
@@ -211,9 +217,13 @@
 		params = [NSMutableDictionary dictionary];
 	}
 	
-	for(NSString *parameterKey in [defaultParams allKeys]) {
-		if ([fsParams objectForKey:parameterKey]) {
-		} else {
+	for(NSString *parameterKey in [defaultParams allKeys])
+    {
+		if ([fsParams objectForKey:parameterKey])
+        {
+		}
+        else
+        {
 			[params setObject:[defaultParams objectForKey:parameterKey] forKey:parameterKey];
 		}
 		
@@ -225,10 +235,13 @@
 # pragma mark Initialization
 
 # pragma mark Task Creation methods
-- (NSDictionary *)taskEnvironment {
+- (NSDictionary *)taskEnvironment
+{
 	if ([delegate respondsToSelector:@selector(taskEnvironmentForParameters:)]) {
 		return [delegate taskEnvironmentForParameters:[self parametersWithImpliedValues]];
-	} else {
+	}
+    else
+    {
 		return [[NSProcessInfo processInfo] environment];
 	}
 }
@@ -266,7 +279,8 @@
 	}
 }
 
-- (void)setupIOForTask:(NSTask *)t {
+- (void)setupIOForTask:(NSTask *)t
+{
 	NSPipe *outputPipe = [[NSPipe alloc] init];
 	NSPipe *inputPipe = [[NSPipe alloc] init];
 	[t setStandardError:outputPipe];
@@ -274,24 +288,31 @@
 	[t setStandardInput:inputPipe];
 }
 
-- (void)registerNotificationsForTask:(NSTask *)t {
+- (void)registerNotificationsForTask:(NSTask *)t
+{
 	NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
 	[nc addObserver:self selector:@selector(handleDataOnPipe:) name:NSFileHandleDataAvailableNotification object:[[t standardOutput] fileHandleForReading]];
 	[nc addObserver:self selector:@selector(handleTaskDidTerminate:) name:NSTaskDidTerminateNotification object:t];
 }
 
-- (NSTask *)taskForLaunch {
+- (NSTask *)taskForLaunch
+{
 	NSTask *t = [[NSTask alloc] init];
 	
 	// Pull together all the tasks parameters
 	NSDictionary *env = [self taskEnvironment];
 	[t setEnvironment:env];
+
 	NSArray *args = [self taskArguments];
 	[t setArguments:args];
+
 	NSString *launchPath = [delegate executablePath];
-	if (launchPath) {
+	if (launchPath)
+    {
 		[t setLaunchPath:launchPath];
-	} else {
+	}
+    else
+    {
 		MFLogS(self, @"Delegate returned nil executable path");
 		return nil;
 	}
@@ -304,7 +325,8 @@
 
 
 # pragma mark Mounting mechanics
-- (BOOL)setupMountPoint {
+- (BOOL)setupMountPoint
+{
 	NSFileManager *fm = [NSFileManager defaultManager];
 	NSString *mountPath = [self mountPath];
 	BOOL pathExists, isDir, returnValue;
@@ -313,41 +335,59 @@
 	NSAssert(mountPath, @"Attempted to filesystem with nil mountPath.");
 		
 	pathExists = [fm fileExistsAtPath:mountPath isDirectory:&isDir];
-	if (pathExists && isDir == YES) {
+	if (pathExists && isDir == YES)
+    {
 		// directory already exists 
 		BOOL empty = ([[fm contentsOfDirectoryAtPath:mountPath error:nil] count] == 0);
 		BOOL writeable = [fm isWritableFileAtPath:mountPath];
-		if (!empty) {
+
+		if (!empty)
+        {
 			errorDescription = @"Mount path directory in use.";
 			returnValue = NO;
-		} else if (!writeable) {
+		}
+        else if (!writeable)
+        {
 			errorDescription = @"Mount path directory not writeable.";
 			returnValue = NO;
-		} else {
+		}
+        else
+        {
 			returnValue = YES;
 		}
-	} else if (pathExists && !isDir) {
+	}
+    else if (pathExists && !isDir)
+    {
 		errorDescription = @"Mount path is a file, not a directory.";
 		returnValue = NO;
-	} else {
-		if ([fm createDirectoryAtPath:mountPath withIntermediateDirectories:YES attributes:nil error:nil]) {
+	}
+    else
+    {
+		if ([fm createDirectoryAtPath:mountPath withIntermediateDirectories:YES attributes:nil error:nil])
+        {
 			returnValue = YES;
-		} else {
+		}
+        else
+        {
 			errorDescription = @"Mount path could not be created.";
 			returnValue = NO;
 		}
 	}
 	
-	if (returnValue == NO) {
+	if (returnValue == NO)
+    {
 		NSError *error = [MFError errorWithErrorCode:kMFErrorCodeMountFaliure description:errorDescription];
 		[statusInfo setObject:error forKey:kMFSTErrorKey];
 		return NO;
-	} else {
+	}
+    else
+    {
 		return YES;
 	}
 }
 
-- (void)removeMountPoint {
+- (void)removeMountPoint
+{
 	NSFileManager *fm = [NSFileManager defaultManager];
 	NSString *mountPath = [self mountPath];
 	BOOL pathExists, isDir;
@@ -355,13 +395,17 @@
 	removexattr([mountPath cStringUsingEncoding:NSUTF8StringEncoding],[@"org.mgorbach.macfusion.xattr.uuid" cStringUsingEncoding:NSUTF8StringEncoding],0);
 	
 	pathExists = [fm fileExistsAtPath:mountPath isDirectory:&isDir];
-	if (pathExists && isDir && ([[fm contentsOfDirectoryAtPath:mountPath error:nil] count] == 0)) {
+
+	if (pathExists && isDir && ([[fm contentsOfDirectoryAtPath:mountPath error:nil] count] == 0))
+    {
 		[fm removeItemAtPath:mountPath error:nil];
 	}
 }
 
-- (void)mount {
-	if (self.status == kMFStatusFSMounted) {
+- (void)mount
+{
+	if ([self.status isEqual: kMFStatusFSMounted])
+    {
 		return;
 	}
 	
@@ -458,13 +502,17 @@
 	[_timer invalidate];
 }
 
-- (void)handleTaskDidTerminate:(NSNotification *)note {
-	if (self.status == kMFStatusFSMounted) {
+- (void)handleTaskDidTerminate:(NSNotification *)note
+{
+	if ([self.status isEqual: kMFStatusFSMounted])
+    {
 		// We are terminating after a mount has been successful
 		// This may not quite be normal (may be for example a bad net connection)
 		// But we'll set status to unmounted anyway
 		self.status = kMFStatusFSUnmounted;
-	} else if (self.status == kMFStatusFSWaiting) {
+	}
+    else if ([self.status isEqual: kMFStatusFSWaiting])
+    {
 		// We terminated while trying to mount
 		NSDictionary* dictionary = [NSDictionary dictionaryWithObjectsAndKeys:
 									self.uuid, kMFErrorFilesystemKey,
@@ -475,17 +523,23 @@
 	}
 }
 
-- (void)appendToOutput:(NSString *)newOutput {
+- (void)appendToOutput:(NSString *)newOutput
+{
 	NSMutableString *output = [statusInfo objectForKey:kMFSTOutputKey];
 	[output appendString:newOutput];
 }
 
-- (void)handleDataOnPipe:(NSNotification *)note {
+- (void)handleDataOnPipe:(NSNotification *)note
+{
 	NSData *pipeData = [[note object] availableData];
-	if ([pipeData length] == 0) {
+
+	if ([pipeData length] == 0)
+    {
 		// pipe is now closed
 		return;
-	} else {
+	}
+    else
+    {
 		NSString *recentOutput = [[NSString alloc] initWithData:pipeData encoding:NSUTF8StringEncoding];
 		[self appendToOutput:recentOutput];
 		[[note object] waitForDataInBackgroundAndNotify];
@@ -493,7 +547,8 @@
 	}
 }
 
-- (void)handleUnmountNotification {
+- (void)handleUnmountNotification
+{
 	self.status = kMFStatusFSUnmounted;
 	[_timer invalidate];
 }
@@ -501,36 +556,47 @@
 - (void)observeValueForKeyPath:(NSString *)keyPath
 					  ofObject:(id)object
                         change:(NSDictionary *)change
-                       context:(void *)context {
+                       context:(void *)context
+{
 	//MFLogS(self, @"Observes notification keypath %@ object %@, change %@",
 	//	   keyPath, object, change);
 	
-	if ([keyPath isEqualToString:kMFSTStatusKey ] && object == self && [[change objectForKey:NSKeyValueChangeNewKey] isEqualToString:kMFStatusFSUnmounted]) {
+	if ([keyPath isEqualToString:kMFSTStatusKey ] && object == self && [[change objectForKey:NSKeyValueChangeNewKey] isEqualToString:kMFStatusFSUnmounted])
+    {
 		[self removeMountPoint];
 	}
 	
-	if ([keyPath isEqualToString:kMFSTStatusKey ] && object == self && [[change objectForKey:NSKeyValueChangeNewKey] isEqualToString:kMFStatusFSFailed]) {
+	if ([keyPath isEqualToString:kMFSTStatusKey ] && object == self && [[change objectForKey:NSKeyValueChangeNewKey] isEqualToString:kMFStatusFSFailed])
+    {
 		[self removeMountPoint];
 	}
 	
-	if ([keyPath isEqualToString:kMFParameterDict]) {
+	if ([keyPath isEqualToString:kMFParameterDict])
+    {
 		[self writeOutData];
 	}
 }
 
-- (NSTimer *)newTimeoutTimer {
-	return [NSTimer scheduledTimerWithTimeInterval:[[[MFPreferences sharedPreferences] getValueForPreference:kMFPrefsTimeout] doubleValue] target:self selector:@selector(handleMountTimeout:) userInfo:nil repeats:NO];
+- (NSTimer *)newTimeoutTimer
+{
+	NSTimer* result = [NSTimer scheduledTimerWithTimeInterval:[[[MFPreferences sharedPreferences] getValueForPreference:kMFPrefsTimeout] doubleValue] target:self selector:@selector(handleMountTimeout:) userInfo:nil repeats:NO];
+    
+    return result;
 }
 
-- (void)handleMountTimeout:(NSTimer *)theTimer {
-	if (_pauseTimeout) {
+- (void)handleMountTimeout:(NSTimer *)theTimer
+{
+	if (_pauseTimeout)
+    {
 		// MFLogS(self, @"Timeout paused");
 		_timer = [self newTimeoutTimer];
 		return;
 	}
 		
-	if (![self isUnmounted] && ![self isMounted]) {
-		if (![self isFailedToMount]) {
+	if (![self isUnmounted] && ![self isMounted])
+    {
+		if (![self isFailedToMount])
+        {
 			MFLogS(self, @"Mount time out detected. Killing task %@ pid %d",
 				   _task, [_task processIdentifier]);
 			kill([_task processIdentifier], SIGKILL);
@@ -545,35 +611,44 @@
 }
 
 # pragma mark Write out
-- (void)writeOutData {
-	if ([self isPersistent]) {
+- (void)writeOutData
+{
+	if ([self isPersistent])
+    {
 		NSString *expandedDirPath = [@"~/Library/Application Support/Macfusion/Filesystems" stringByExpandingTildeInPath];
 		
 		BOOL isDir;
-		if (![[NSFileManager defaultManager] fileExistsAtPath:expandedDirPath isDirectory:&isDir] || !isDir)  {
+		if (![[NSFileManager defaultManager] fileExistsAtPath:expandedDirPath isDirectory:&isDir] || !isDir)
+        {
 			NSError *error = nil;
 			BOOL ok = [[NSFileManager defaultManager] createDirectoryAtPath:expandedDirPath withIntermediateDirectories:YES attributes:nil error:&error];
-			if (!ok) {
+
+			if (!ok)
+            {
 				MFLogS(self, @"Failed to create directory save filesystem %@",[error localizedDescription]);
 			}
 		}
 		
 		NSString *fullPath = [self valueForParameterNamed:kMFFSFilePathParameter]; 
-		if ([[NSFileManager defaultManager] fileExistsAtPath:fullPath]) {
+		if ([[NSFileManager defaultManager] fileExistsAtPath:fullPath])
+        {
 			BOOL deleteOK = [[NSFileManager defaultManager] removeItemAtPath:fullPath error:NULL];
-			if (!deleteOK) {
+			if (!deleteOK)
+            {
 				MFLogS(self, @"Failed to delete old file during save");
 			}
 		}
 		
 		BOOL writeOK = [parameters writeToFile:fullPath atomically:NO];
-		if (!writeOK) {
+		if (!writeOK)
+        {
 			MFLogS(self, @"Failed to write out dictionary to file %@", fullPath);
 		}
 	}
 }
 
-- (NSError *)genericError {
+- (NSError *)genericError
+{
 	NSDictionary* dictionary = [NSDictionary dictionaryWithObjectsAndKeys:
 								self.uuid, kMFErrorFilesystemKey,
 								@"Mount has failed.", NSLocalizedDescriptionKey,
@@ -583,18 +658,24 @@
 
 
 #pragma mark Accessors and Setters
-- (void)setStatus:(NSString *)newStatus {
-	if (newStatus && ![newStatus isEqualToString:self.status]) {
+- (void)setStatus:(NSString *)newStatus
+{
+	if (newStatus && ![newStatus isEqualToString:self.status])
+    {
 		// Hack this a bit so that we can set an error on faliure
 		// Do this only if an error hasn't already been set
 		[statusInfo setObject:newStatus forKey:kMFSTStatusKey];
 			
-		if([newStatus isEqualToString:kMFStatusFSFailed]) {
+		if([newStatus isEqualToString:kMFStatusFSFailed])
+        {
 			NSError *error = nil;
 			// Ask the delegate for the error
-			if ([delegate respondsToSelector:@selector(errorForParameters:output:)] && (error = [delegate errorForParameters:[self parametersWithImpliedValues] output:[statusInfo objectForKey:kMFSTOutputKey]]) && error) {
+			if ([delegate respondsToSelector:@selector(errorForParameters:output:)] && (error = [delegate errorForParameters:[self parametersWithImpliedValues] output:[statusInfo objectForKey:kMFSTOutputKey]]) && error)
+            {
 				[self setError:error];
-			} else if (![self error]) {
+			}
+            else if (![self error])
+            {
 				// Use a generic error
 				[self setError:[self genericError]];
 			}
@@ -602,17 +683,21 @@
 	}
 }
 
-- (void)setError:(NSError *)error {
-	if (error) {
+- (void)setError:(NSError *)error
+{
+	if (error)
+    {
 		[statusInfo setObject:error forKey:kMFSTErrorKey];
 	}
 }
 
-- (BOOL)pauseTimeout {
+- (BOOL)pauseTimeout
+{
 	return _pauseTimeout;
 }
 
-- (void)setPauseTimeout:(BOOL)p {
+- (void)setPauseTimeout:(BOOL)p
+{
 	_pauseTimeout = p;
 	[_timer invalidate];
 	_timer = [self newTimeoutTimer];

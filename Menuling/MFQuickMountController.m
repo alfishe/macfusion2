@@ -22,25 +22,32 @@
 #import "MFError.h"
 
 @implementation MFQuickMountController
-- (id)initWithWindowNibName:(NSString *)name {
-	if (self = [super initWithWindowNibName:name]) {
+- (id)initWithWindowNibName:(NSString *)name
+{
+	if (self = [super initWithWindowNibName:name])
+    {
 		_client = [MFClient sharedClient];
 	}
 	
 	return self;
 }
 
-- (void)awakeFromNib {
+- (void)awakeFromNib
+{
 	[[self window] center];
 	[recentsTableView setDoubleAction:@selector(recentClicked:)];
 	[recentsTableView setTarget:self];
 }
 
-- (void)handleMountAttemptForFS:(MFClientFS *)myFS error:(NSError *)error {
+- (void)handleMountAttemptForFS:(MFClientFS *)myFS error:(NSError *)error
+{
 	_fs = myFS;
-	if(!_fs) {
+	if (!_fs)
+    {
 		[self presentError:error modalForWindow:[self window] delegate:nil didPresentSelector:nil contextInfo:nil];
-	} else {
+	}
+    else
+    {
 		// Wait for mount here
 		[[[recentsTableView window] contentView] addSubview: indicator];
 		[_fs setClientFSDelegate:self];
@@ -50,42 +57,54 @@
 	}
 }
 
-- (IBAction)quickMount:(id)sender {
-	if ([[self window] firstResponder] == recentsTableView && [recentsTableView selectedRow] != NSNotFound) {
+- (IBAction)quickMount:(id)sender
+{
+	if ([[self window] firstResponder] == recentsTableView && [recentsTableView selectedRow] != NSNotFound)
+    {
 		[self recentClicked: [[recentsArrayController selectedObjects] objectAtIndex:0]];
 		return;
 	}
 	
 	NSURL *url = [NSURL URLWithString:[qmTextField stringValue]];
-	if (!url || ![url scheme] || ![url host]) {
+
+	if (!url || ![url scheme] || ![url host])
+    {
 		NSAlert *alert = [NSAlert alertWithMessageText: @"Could not parse URL" defaultButton:@"OK" alternateButton:@""otherButton:@"" informativeTextWithFormat:@"Please check the format"];
 		[alert setAlertStyle:NSCriticalAlertStyle];
 		[alert beginSheetModalForWindow:[self window] modalDelegate:self didEndSelector:nil contextInfo:nil];
-	} else {
+	}
+    else
+    {
 		NSError *error;
 		MFClientFS *tempFS = [[MFClient sharedClient] quickMountFilesystemWithURL:url error:&error];
 		[self handleMountAttemptForFS:tempFS error:error];
 	}
 }
 
-- (IBAction)recentClicked:(id)sender {
+- (IBAction)recentClicked:(id)sender
+{
 	MFClientRecent *recent = [[[MFClient sharedClient] recents] objectAtIndex:[recentsTableView selectedRow]];
 	NSError *error;
 	MFClientFS *tempFS = [_client mountRecent:recent error:&error];
 	[self handleMountAttemptForFS:tempFS error:error];
 }
 
-- (void)filesystemDidChangeStatus:(MFClientFS *)filesystem {
-	if ([_fs isMounted]) {
+- (void)filesystemDidChangeStatus:(MFClientFS *)filesystem
+{
+	if ([_fs isMounted])
+    {
 		[qmTextField setStringValue:@""];
 		[indicator stopAnimation:self];
 		[indicator setHidden:YES];
 		[connectButton setHidden:NO];
+
 		[[self window] close];
 	}
 		
-	if ([_fs isFailedToMount]) {
-		if ([_fs error]) {
+	if ([_fs isFailedToMount])
+    {
+		if ([_fs error])
+        {
 			[self presentError:[_fs error] modalForWindow:[self window] delegate:self didPresentSelector:@selector(alertDidEnd:returnCode:contextInfo:) contextInfo:nil];
 		}
 		
@@ -96,12 +115,14 @@
 									 otherButton:@""
 					   informativeTextWithFormat:@"No error was given"];
 		[alert setAlertStyle:NSCriticalAlertStyle];
-		[alert beginSheetModalForWindow:[self window] modalDelegate:self didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:) contextInfo:self];
+		[alert beginSheetModalForWindow:[self window] modalDelegate:self didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:) contextInfo:(__bridge void *)(self)];
 	}
 }
 
-- (NSError *)willPresentError:(NSError *)error {
-	if ([error code] == kMFErrorCodeMountFaliure || [error code] == kMFErrorCodeNoPluginFound) {
+- (NSError *)willPresentError:(NSError *)error
+{
+	if ([error code] == kMFErrorCodeMountFaliure || [error code] == kMFErrorCodeNoPluginFound)
+    {
 		NSString *detailedDescription = [error localizedDescription];
 		NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys: @"Could not mount this URL",  NSLocalizedDescriptionKey, detailedDescription, NSLocalizedRecoverySuggestionErrorKey, nil];
 		return [NSError errorWithDomain: kMFErrorDomain code:kMFErrorCodeCustomizedFaliure userInfo:userInfo];
@@ -110,7 +131,8 @@
 	return error;
 }
 
-- (void) alertDidEnd:(NSAlert *)alert returnCode:(int)returnCode contextInfo:(void *)contextInfo {
+- (void) alertDidEnd:(NSAlert *)alert returnCode:(int)returnCode contextInfo:(void *)contextInfo
+{
 	[indicator stopAnimation:self];
 	[indicator setHidden:YES];
 	[connectButton setHidden:NO];

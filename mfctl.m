@@ -23,9 +23,8 @@
 
 #include "stdarg.h"
 
-int main (int argc, const char * argv[]) {
-    NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
-	
+int main (int argc, const char * argv[])
+{
 	NSArray* args = [[NSProcessInfo processInfo] arguments];
 	MFClient* client = [MFClient sharedClient];
 	BOOL ok = [client setup];
@@ -107,7 +106,6 @@ int main (int argc, const char * argv[]) {
 		MFPrint(@"Invalid first argument. Exiting!");
 	}
 
-    [pool drain];
     return 0;
 }
 

@@ -66,25 +66,31 @@ NSArray *mfcSecretClientsForFileystem(MFFilesystem *fs) {
 		}
 	}
 	
-	return [[clientList copy] autorelease];
+	return [clientList copy];
 }
 
 BOOL mfcGetStateOfLoginItemWithPath(NSString *path) {
 	LSSharedFileListRef loginItemsRef = LSSharedFileListCreate(NULL, kLSSharedFileListSessionLoginItems, NULL);
 	BOOL present = FALSE;
 	UInt32 seedValue;
-	NSArray  *loginItems = (NSArray *)LSSharedFileListCopySnapshot(loginItemsRef, &seedValue);
-	for(id loginItem in loginItems) {
-		LSSharedFileListItemRef itemRef = (LSSharedFileListItemRef)loginItem;
-		NSURL *theURL = [NSURL new];
-		LSSharedFileListItemResolve(itemRef, 0, (CFURLRef*)&theURL, NULL);
-		present = ([[theURL path] isEqualToString:path]);
-		if (present) {
+    
+	NSArray  *loginItems = (NSArray *)CFBridgingRelease(LSSharedFileListCopySnapshot(loginItemsRef, &seedValue));
+    
+	for (id loginItem in loginItems)
+    {
+		LSSharedFileListItemRef itemRef = (LSSharedFileListItemRef)CFBridgingRetain(loginItem);
+		CFURLRef *theURL;
+		LSSharedFileListItemResolve(itemRef, 0, theURL, NULL);
+        
+        NSURL* url = (__bridge NSURL*)*theURL;
+		present = ([[url path] isEqualToString:path]);
+		if (present)
+        {
 			break;
 		}
 	}
 	
-	CFRelease(loginItems);
+	CFRelease((__bridge CFTypeRef)(loginItems));
 	CFRelease(loginItemsRef);
 	return present;
 }
@@ -98,29 +104,36 @@ BOOL mfcSetStateForAgentLoginItem(BOOL state) {
 	NSString* agentPath = mfcAgentBundlePath();
 	LSSharedFileListRef loginItemsRef = LSSharedFileListCreate(NULL, kLSSharedFileListSessionLoginItems, NULL);
 	
-	if (mfcGetStateOfLoginItemWithPath(agentPath) == state) {
+	if (mfcGetStateOfLoginItemWithPath(agentPath) == state)
+    {
 		return NO;
 	}
 	
 	UInt32 seedValue;
-	NSArray *loginItems = (NSArray *)LSSharedFileListCopySnapshot(loginItemsRef, &seedValue);
-	for(id loginItem in loginItems) {
-		LSSharedFileListItemRef itemRef = (LSSharedFileListItemRef)loginItem;
-		NSURL* theURL = [NSURL new];
-		LSSharedFileListItemResolve(itemRef, 0, (CFURLRef*)&theURL, NULL);
-		NSString* checkPath = [[theURL path] lastPathComponent];
-		if ([checkPath isLike: @"*macfusionAgent*"]) {
+	NSArray *loginItems = (NSArray *)CFBridgingRelease(LSSharedFileListCopySnapshot(loginItemsRef, &seedValue));
+	for(id loginItem in loginItems)
+    {
+		LSSharedFileListItemRef itemRef = (__bridge LSSharedFileListItemRef)loginItem;
+		CFURLRef theURL;
+		LSSharedFileListItemResolve(itemRef, 0, &theURL, NULL);
+        
+        NSURL* url = (__bridge NSURL*)theURL;
+		NSString* checkPath = [[url path] lastPathComponent];
+        
+		if ([checkPath isLike: @"*macfusionAgent*"])
+        {
 			LSSharedFileListItemRemove(loginItemsRef, itemRef);
 		}
 	}
 	
-	if(state == YES) {
+	if(state == YES)
+    {
 		LSSharedFileListInsertItemURL(loginItemsRef, kLSSharedFileListItemBeforeFirst, NULL, NULL, 
-									  (CFURLRef)[NSURL fileURLWithPath: agentPath], NULL, NULL);
+									  (__bridge CFURLRef)[NSURL fileURLWithPath: agentPath], NULL, NULL);
 	}
 	
 	CFRelease(loginItemsRef);
-	CFRelease(loginItems);
+	CFRelease((__bridge CFTypeRef)(loginItems));
 	return YES;
 }
 
@@ -164,8 +177,8 @@ void mfcCheckIntegrity() {
 		CopyProcessName( &currentPSN, &processName );
 		pid_t processPID = 0;
 		
-		BOOL isAgent = [(NSString*)processName isEqualToString: @"macfusionAgent"];
-		BOOL isMenuling = [(NSString*)processName isEqualToString: @"macfusionMenuling"];
+		BOOL isAgent = [(__bridge NSString*)processName isEqualToString: @"macfusionAgent"];
+		BOOL isMenuling = [(__bridge NSString*)processName isEqualToString: @"macfusionMenuling"];
 		
 		if (isAgent || isMenuling) {
 			error = GetProcessBundleLocation( &currentPSN, &bundleFSRef);
@@ -173,7 +186,7 @@ void mfcCheckIntegrity() {
 			
 			if (error == noErr) {
 				CFURLRef bundleURLRef = CFURLCreateFromFSRef( kCFAllocatorDefault, &bundleFSRef);
-				processPath = [ (NSURL*)bundleURLRef path ];
+				processPath = [ (__bridge NSURL*)bundleURLRef path ];
 				CFRelease( bundleURLRef );
 			} else {
 				processPath = (NSString*)[NSNull null]; 
@@ -245,7 +258,7 @@ void trashFSEventCallBack(ConstFSEventStreamRef streamRef,
 
 void mfcSetupTrashMonitoring() {
 	FSEventStreamRef eventStream = FSEventStreamCreate(NULL, trashFSEventCallBack, NULL,
-													   (CFArrayRef)[NSArray arrayWithObject: 
+													   (__bridge CFArrayRef)[NSArray arrayWithObject: 
 																	[mfcMainBundlePath() stringByDeletingLastPathComponent]],
 													   kFSEventStreamEventIdSinceNow,
 													   0, kFSEventStreamCreateFlagUseCFTypes);
